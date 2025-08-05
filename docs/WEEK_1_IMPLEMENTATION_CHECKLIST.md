@@ -2,28 +2,67 @@
 
 **Goal**: Set up Better Auth integration with extraction-ready architecture  
 **Timeline**: 5 days  
-**Focus**: Build as if already separate, deploy as embedded
+**Focus**: Build as if already separate, deploy as embedded  
+**Target**: CARIHealth SaaS monorepo (cari-saas)
 
 ## Day 1: Project Structure & Dependencies
 
-### ✅ Initial Setup
+### ✅ Initial Setup (CARIHealth SaaS Monorepo)
 ```bash
-# In your healthcare MVP project root
-mkdir -p src/lib/auth-service/{core,providers,plugins,middleware,types,utils}
-mkdir -p src/lib/auth-service/admin
-mkdir -p tests/auth-service
-mkdir -p docs/auth-service
+# In your cari-saas monorepo root
+cd cari-saas
+mkdir -p packages/auth-service/{core,providers,plugins,middleware,types,utils}
+mkdir -p packages/auth-service/admin
+mkdir -p packages/auth-service/tests
+mkdir -p packages/auth-service/docs
+mkdir -p apps/web/lib/auth  # Integration layer for web app
 ```
 
 ### ✅ Install Dependencies
 ```bash
+# In cari-saas root - install for the auth-service package
+cd packages/auth-service
+npm init -y  # Create package.json for auth service
 npm install better-auth @better-auth/prisma
 npm install -D @types/bcryptjs @types/jsonwebtoken
+
+# In web app - reference auth service as local dependency
+cd ../../apps/web
+# Add to package.json: "@cari-saas/auth-service": "workspace:*"
+```
+
+### ✅ Monorepo Package Structure
+
+**packages/auth-service/package.json**
+```json
+{
+  "name": "@cari-saas/auth-service",
+  "version": "0.1.0",
+  "description": "CARIHealth authentication service - future MLPipes Auth",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "better-auth": "^1.3.4",
+    "@better-auth/prisma": "^1.3.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^5.0.0",
+    "typescript": "^5.3.2",
+    "jest": "^29.0.0"
+  }
+}
 ```
 
 ### ✅ Create Base Files
 
-**src/lib/auth-service/index.ts**
+**packages/auth-service/src/index.ts**
 ```typescript
 // Main export file - your app only imports from here
 export { AuthService } from './core/service'
@@ -216,7 +255,7 @@ export interface AuditEvent {
 
 ### ✅ Core Service Class
 
-**src/lib/auth-service/core/service.ts**
+**packages/auth-service/src/core/service.ts**
 ```typescript
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
@@ -538,7 +577,7 @@ export class AuthService {
 
 ### ✅ Configuration Setup
 
-**src/lib/auth-service/config.ts**
+**packages/auth-service/src/config.ts**
 ```typescript
 import type { AuthConfig } from './types'
 import type { PrismaClient } from '@prisma/client'
@@ -622,7 +661,7 @@ export const defaultTestConfig: Partial<AuthConfig> = {
 
 ### ✅ Update Prisma Schema
 
-**Add to your existing prisma/schema.prisma:**
+**Add to your existing cari-saas/apps/web/prisma/schema.prisma:**
 ```prisma
 // Better Auth required models (add to existing schema)
 model Account {
@@ -792,6 +831,8 @@ model AuditLog {
 
 ### ✅ Generate Migration
 ```bash
+# From cari-saas/apps/web directory
+cd cari-saas/apps/web
 npx prisma migrate dev --name "add-better-auth-and-healthcare-audit"
 npx prisma generate
 ```
@@ -800,12 +841,12 @@ npx prisma generate
 
 ### ✅ Create App Auth Interface
 
-**src/lib/auth.ts** (Your app's auth interface)
+**apps/web/lib/auth/index.ts** (Your CARIHealth web app's auth interface)
 ```typescript
-import { AuthService, AuthAdminService } from './auth-service'
-import { createAuthConfig } from './auth-service/config'
-import { prisma } from './database' // Your existing Prisma instance
-import type { AuthContext, SignUpRequest, SignInRequest, User } from './auth-service'
+import { AuthService, AuthAdminService } from '@cari-saas/auth-service'
+import { createAuthConfig } from '@cari-saas/auth-service/config'
+import { prisma } from '../database' // Your existing Prisma instance
+import type { AuthContext, SignUpRequest, SignInRequest, User } from '@cari-saas/auth-service'
 
 // Initialize auth service with your configuration
 const authConfig = createAuthConfig(prisma)
@@ -816,9 +857,9 @@ export const authAdminService = new AuthAdminService(authService)
 export async function signUp(data: SignUpRequest, context?: AuthContext) {
   const result = await authService.signUp(data, context)
   
-  // Your app-specific logic (NOT part of auth service)
+  // Your CARIHealth app-specific logic (NOT part of auth service)
   if (result.success && result.user) {
-    await createHealthcareProfile(result.user)
+    await createCARIHealthProfile(result.user)
     await sendWelcomeEmail(result.user)
   }
   
@@ -845,14 +886,14 @@ export async function signOut(sessionToken: string, context?: AuthContext) {
   return authService.revokeSession(sessionToken, context)
 }
 
-// Your app-specific functions (keep separate from auth service)
-async function createHealthcareProfile(user: User) {
-  // Create patient/provider profile in your app
-  await prisma.healthcareProfile.create({
+// Your CARIHealth app-specific functions (keep separate from auth service)
+async function createCARIHealthProfile(user: User) {
+  // Create patient/provider profile in your CARIHealth app
+  await prisma.cariHealthProfile.create({
     data: {
       userId: user.id,
       profileType: inferProfileType(user),
-      // ... your app logic
+      // ... your CARIHealth business logic
     }
   })
 }
@@ -870,15 +911,15 @@ async function updateLastLogin(userId: string) {
 }
 
 function inferProfileType(user: User): string {
-  // Your business logic to determine profile type
-  if (user.npiNumber) return 'provider'
+  // Your CARIHealth business logic to determine profile type
+  if (user.npiNumber) return 'healthcare_provider'
   return 'patient'
 }
 ```
 
 ### ✅ Better Auth API Route
 
-**src/app/api/auth/[...all]/route.ts**
+**apps/web/app/api/auth/[...all]/route.ts**
 ```typescript
 import { authService } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -905,7 +946,7 @@ export { handler as GET, handler as POST }
 
 ### ✅ Environment Variables
 
-**Add to .env.local:**
+**Add to apps/web/.env.local:**
 ```bash
 # Better Auth Configuration
 BETTER_AUTH_SECRET="your-32-character-secret-key-here-change-in-production"
@@ -931,15 +972,15 @@ PASSWORD_HISTORY="12"
 AUDIT_RETENTION_DAYS="2555"  # 7 years
 
 # Email Configuration
-EMAIL_FROM="noreply@yourcompany.com"
+EMAIL_FROM="noreply@carihealth.com"
 ```
 
 ### ✅ Basic Testing
 
-**tests/auth-service/auth-service.test.ts**
+**packages/auth-service/tests/auth-service.test.ts**
 ```typescript
-import { AuthService } from '../../src/lib/auth-service'
-import { createAuthConfig, defaultTestConfig } from '../../src/lib/auth-service/config'
+import { AuthService } from '../src/core/service'
+import { createAuthConfig, defaultTestConfig } from '../src/config'
 import { PrismaClient } from '@prisma/client'
 
 // Mock Prisma for testing
@@ -1048,13 +1089,27 @@ describe('AuthService', () => {
 
 ### ✅ Package.json Scripts
 
-**Add to package.json:**
+**Add to cari-saas root package.json:**
 ```json
 {
   "scripts": {
-    "test:auth-service": "jest tests/auth-service --testTimeout=10000",
-    "test:auth-service:watch": "jest tests/auth-service --watch",
+    "test:auth-service": "npm run test --workspace=@cari-saas/auth-service",
+    "test:auth-service:watch": "npm run test:watch --workspace=@cari-saas/auth-service",
+    "build:auth-service": "npm run build --workspace=@cari-saas/auth-service",
     "auth:generate-secret": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  }
+}
+```
+
+**Update packages/auth-service/package.json scripts:**
+```json
+{
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch", 
+    "test": "jest --testTimeout=10000",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/"
   }
 }
 ```
@@ -1063,16 +1118,20 @@ describe('AuthService', () => {
 
 ### ✅ Verification Steps
 
-1. **Project Structure**
+1. **Monorepo Structure**
    ```bash
-   # Verify clean separation
-   ls -la src/lib/auth-service/
+   # Verify clean separation in cari-saas
+   ls -la packages/auth-service/src/
    # Should see: core/, providers/, plugins/, middleware/, types/, admin/
+   
+   ls -la apps/web/lib/auth/
+   # Should see: index.ts (integration layer)
    ```
 
 2. **Database Migration**
    ```bash
-   # Run migration
+   # From cari-saas/apps/web
+   cd apps/web
    npx prisma migrate dev
    
    # Verify tables created
@@ -1082,23 +1141,30 @@ describe('AuthService', () => {
 
 3. **Environment Setup**
    ```bash
-   # Generate auth secret
+   # From cari-saas root
    npm run auth:generate-secret
-   # Copy output to BETTER_AUTH_SECRET in .env.local
+   # Copy output to BETTER_AUTH_SECRET in apps/web/.env.local
    ```
 
 4. **Basic Test**
    ```bash
-   # Run auth service tests
+   # From cari-saas root
    npm run test:auth-service
    # Should pass basic validation tests
    ```
 
 5. **App Integration**
    ```typescript
-   // Test import works
+   // Test import works in your CARIHealth web app
    import { authService, signUp, signIn } from '@/lib/auth'
    // Should import without errors
+   ```
+
+6. **Monorepo Workspace Check**
+   ```bash
+   # From cari-saas root
+   npm run build:auth-service
+   # Should build auth service package successfully
    ```
 
 ### ✅ Week 1 Success Criteria
@@ -1117,8 +1183,14 @@ describe('AuthService', () => {
 Your auth service should now be structured so that this command would work:
 ```bash
 # This should be possible after Week 4
-cp -r src/lib/auth-service ~/new-mlpipes-auth-repo/src/
+cp -r cari-saas/packages/auth-service ~/new-mlpipes-auth-repo/
 # With minimal changes for standalone deployment
+
+# The package is already isolated:
+# - Has its own package.json
+# - Clean dependencies 
+# - No cari-saas specific coupling
+# - Ready for npm publish as @mlpipes/auth-service
 ```
 
 ## Next Steps (Week 2)
@@ -1129,6 +1201,32 @@ cp -r src/lib/auth-service ~/new-mlpipes-auth-repo/src/
 4. **Add Healthcare Plugins**: NPI validation, role management
 5. **Create Basic UI**: Sign-in/sign-up forms
 
-This foundation gives you a working healthcare auth system embedded in your MVP, but architected for easy extraction to open source later. The clean separation ensures you can build your MVP confidently while preparing for community contribution.
+## CARIHealth SaaS Integration Summary
 
-Would you like me to create the Week 2 checklist focusing on magic links and 2FA implementation?
+This Week 1 implementation creates:
+
+**Monorepo Structure:**
+```
+cari-saas/
+├── packages/
+│   └── auth-service/          # ← Future MLPipes Auth (isolated)
+│       ├── src/
+│       ├── tests/
+│       └── package.json       # Independent package
+└── apps/
+    └── web/                   # ← Your CARIHealth web app
+        ├── lib/auth/          # Integration layer
+        ├── prisma/            # Database with auth tables
+        └── .env.local         # Auth configuration
+```
+
+**Benefits:**
+- ✅ **Clean separation** between auth service and CARIHealth business logic
+- ✅ **Monorepo benefits** while maintaining extraction readiness
+- ✅ **Independent packages** make extraction mechanical
+- ✅ **Healthcare compliance** built into auth from day one
+- ✅ **CARIHealth branding** maintained in your app layer
+
+This foundation gives you a working healthcare auth system embedded in your CARIHealth SaaS MVP, but architected for easy extraction to open source MLPipes Auth later. The clean separation ensures you can build your MVP confidently while preparing for community contribution.
+
+The auth service package is already structured as if it's a separate npm package, making the future extraction to `@mlpipes/auth-service` straightforward.
