@@ -1,6 +1,12 @@
 # MLPipes Auth Service
 
-Open-source, enterprise-grade authentication and authorization service designed specifically for healthcare applications. Provides secure, HIPAA-compliant authentication with SOC 2 Type II and HITRUST readiness, supporting modern authentication methods including passkeys, multi-factor authentication, and healthcare-specific protocols like SMART on FHIR.
+**Compliance-first, enterprise-grade authentication service built on Better Auth**
+
+Open-source authentication and authorization service designed specifically for healthcare applications with compliance as the foundational priority. Built on the robust [Better Auth](https://github.com/better-auth/better-auth) framework, this service provides secure, HIPAA-compliant authentication with SOC 2 Type II and HITRUST readiness, supporting modern authentication methods including passkeys, multi-factor authentication, and healthcare-specific protocols like SMART on FHIR.
+
+## Built on Better Auth
+
+This service leverages the powerful [Better Auth](https://github.com/better-auth/better-auth) authentication library, extending it with healthcare-specific compliance features and multi-tenant architecture. Better Auth provides the solid foundation for modern authentication patterns while this implementation adds the necessary compliance layers for healthcare environments.
 
 ## Features
 
@@ -254,11 +260,12 @@ docker run -p 3001:3000 mlpipes/auth-service
 
 - **Framework**: Next.js 14 with App Router
 - **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Better Auth with multi-factor support
+- **Authentication**: Better Auth with compliance-focused extensions
 - **API**: tRPC for type-safe APIs
 - **UI**: Tailwind CSS with healthcare design system
 - **Testing**: Vitest with comprehensive test coverage
 - **Deployment**: Docker with NGINX reverse proxy
+- **Compliance**: Built-in HIPAA, SOC 2, and HITRUST readiness
 
 ### Security Architecture
 

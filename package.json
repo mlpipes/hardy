@@ -1,7 +1,7 @@
 {
   "name": "@mlpipes/auth-service",
   "version": "1.0.0",
-  "description": "MLPipes Auth Service - Open-source enterprise authentication with HIPAA, SOC 2 Type II, and HITRUST readiness for healthcare applications",
+  "description": "MLPipes Auth Service - Compliance-first authentication service built on Better Auth with HIPAA, SOC 2 Type II, and HITRUST readiness for healthcare applications",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
@@ -97,6 +97,8 @@
   },
   "keywords": [
     "authentication",
+    "better-auth",
+    "compliance-first",
     "healthcare",
     "fhir",
     "smart-on-fhir",
@@ -111,8 +113,7 @@
     "hipaa",
     "soc2",
     "hitrust",
-    "compliance",
-    "better-auth"
+    "compliance"
   ],
   "repository": {
     "type": "git",

@@ -2,7 +2,27 @@
 
 ## Overview
 
-MLPipes Auth Service is an open-source, enterprise-grade authentication and authorization service designed specifically for healthcare applications. It provides secure, HIPAA-compliant authentication with SOC 2 Type II and HITRUST readiness, supporting modern authentication methods including passkeys, multi-factor authentication, and healthcare-specific protocols like SMART on FHIR.
+MLPipes Auth Service is a **compliance-first**, open-source, enterprise-grade authentication and authorization service designed specifically for healthcare applications. Built on the robust [Better Auth](https://github.com/better-auth/better-auth) framework, it extends the core authentication capabilities with healthcare-specific compliance features, multi-tenant architecture, and comprehensive audit systems.
+
+The service provides secure, HIPAA-compliant authentication with SOC 2 Type II and HITRUST readiness, supporting modern authentication methods including passkeys, multi-factor authentication, and healthcare-specific protocols like SMART on FHIR.
+
+## Foundation: Better Auth
+
+This service is built upon the [Better Auth](https://github.com/better-auth/better-auth) authentication library, which provides:
+
+- **Modern Authentication Patterns**: Built-in support for passkeys, magic links, OAuth2, and multi-factor authentication
+- **Type-Safe APIs**: Full TypeScript support with automatic type generation
+- **Plugin Architecture**: Extensible plugin system for custom authentication methods
+- **Security Best Practices**: Built-in protection against common authentication vulnerabilities
+- **Developer Experience**: Excellent documentation and developer tooling
+
+MLPipes Auth Service extends Better Auth with healthcare-specific requirements:
+
+- **Compliance-First Design**: HIPAA, SOC 2, and HITRUST compliance built into every component
+- **Multi-Tenant Isolation**: Enterprise-grade tenant separation with row-level security
+- **Healthcare Integrations**: SMART on FHIR, EHR connectivity, and medical specialty tracking
+- **Comprehensive Auditing**: 7-year audit retention and detailed compliance reporting
+- **Enterprise Features**: Advanced admin dashboards, organization management, and security monitoring
 
 ## Architecture Requirements
 
