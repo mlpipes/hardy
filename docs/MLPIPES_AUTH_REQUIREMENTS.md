@@ -387,5 +387,5 @@ services:
 **Document Version**: 1.0  
 **Last Updated**: January 2025  
 **Next Review**: March 2025  
-**Owner**: MLPipes Engineering Team  
+**Owner**: Alfeo A. Sabay, MLPipes LLC  
 **Compliance Status**: HIPAA Ready, SOC 2 Type II Ready, HITRUST CSF Ready

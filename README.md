@@ -405,4 +405,6 @@ MLPipes Auth Service is licensed under the [MIT License](LICENSE).
 
 **MLPipes Auth Service** - Secure, compliant authentication for healthcare applications.
 
+Author: Alfeo A. Sabay, MLPipes LLC
+
 For more information, visit [https://mlpipes.ai](https://mlpipes.ai) or contact [support@mlpipes.ai](mailto:support@mlpipes.ai).
