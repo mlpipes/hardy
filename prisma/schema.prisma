@@ -1,0 +1,316 @@
+// MLPipes Auth Service - Database Schema
+// Multi-tenant authentication with HIPAA compliance and row-level security
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core authentication models with multi-tenant support
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  emailVerified      Boolean   @default(false)
+  emailVerifiedAt    DateTime?
+  name               String?
+  image              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  // Healthcare-specific fields
+  firstName          String?
+  lastName           String?
+  licenseNumber      String?
+  npiNumber          String?
+  specialties        Json?     // Array of medical specialties
+  
+  // Multi-tenant fields
+  organizationId     String?   // Tenant isolation
+  departmentId       String?
+  role               String    @default("user")
+  permissions        Json?     // Role-based permissions
+  
+  // Security fields
+  twoFactorEnabled   Boolean   @default(false)
+  twoFactorSecret    String?
+  backupCodes        Json?     // Encrypted backup codes
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  failedLoginAttempts Int      @default(0)
+  lockedAt           DateTime?
+  
+  // Relationships
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessions           Session[]
+  accounts           Account[]
+  passkeys           Passkey[]
+  auditLogs          AuditLog[]
+  twoFactorTokens    TwoFactorToken[]
+  magicLinks         MagicLink[]
+  memberInvitations  Member[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  
+  // Multi-tenant field
+  organizationId    String?
+  
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  
+  // Multi-tenant field
+  organizationId String?
+  
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+// WebAuthn/Passkey support
+model Passkey {
+  id              String   @id @default(cuid())
+  credentialId    String   @unique
+  userId          String
+  publicKey       String
+  counter         Int      @default(0)
+  transports      Json?    // Array of transport methods
+  name            String?  // User-friendly name
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime?
+  
+  // Multi-tenant field
+  organizationId  String?
+  
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("passkeys")
+}
+
+// Two-Factor Authentication
+model TwoFactorToken {
+  id             String   @id @default(cuid())
+  userId         String
+  token          String
+  type           String   // "sms", "email", "totp"
+  expiresAt      DateTime
+  verified       Boolean  @default(false)
+  attempts       Int      @default(0)
+  
+  // Multi-tenant field
+  organizationId String?
+  
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("two_factor_tokens")
+}
+
+// Magic Link Authentication
+model MagicLink {
+  id             String   @id @default(cuid())
+  email          String
+  token          String   @unique
+  userId         String?
+  expiresAt      DateTime
+  used           Boolean  @default(false)
+  usedAt         DateTime?
+  
+  // Multi-tenant field
+  organizationId String?
+  
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("magic_links")
+}
+
+// Multi-tenant Organization model
+model Organization {
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  logo                  String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Healthcare-specific fields
+  organizationType      String   @default("healthcare_practice")
+  practiceNpi           String?
+  fhirEndpoint          String?
+  complianceSettings    Json?    // HIPAA, SOC2 settings
+  subscriptionTier      String   @default("basic")
+  
+  // Business fields
+  address               Json?    // Structured address
+  phoneNumber           String?
+  website               String?
+  timezone              String   @default("UTC")
+  
+  // Security settings
+  mfaRequired           Boolean  @default(true)
+  passwordPolicy        Json?    // Password requirements
+  sessionTimeout        Int      @default(1800) // 30 minutes
+  auditRetentionDays    Int      @default(2555) // 7 years
+  
+  // Relationships
+  users                 User[]
+  members               Member[]
+  accounts              Account[]
+  sessions              Session[]
+  passkeys              Passkey[]
+  auditLogs             AuditLog[]
+  twoFactorTokens       TwoFactorToken[]
+  magicLinks            MagicLink[]
+  invitations           Invitation[]
+  oauthClients          OAuthClient[]
+  
+  @@map("organizations")
+}
+
+// Organization member management
+model Member {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String   @default("member")
+  permissions    Json?    // Additional permissions
+  invitedAt      DateTime @default(now())
+  joinedAt       DateTime?
+  invitedBy      String?
+  status         String   @default("pending") // pending, active, suspended
+  
+  // Healthcare-specific fields
+  departmentId   String?
+  licenseNumber  String?
+  specialties    Json?
+  
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, organizationId])
+  @@map("members")
+}
+
+// Organization invitations
+model Invitation {
+  id             String   @id @default(cuid())
+  email          String
+  organizationId String
+  role           String   @default("member")
+  token          String   @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  invitedBy      String
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("invitations")
+}
+
+// OAuth2 client management
+model OAuthClient {
+  id                    String   @id @default(cuid())
+  clientId              String   @unique
+  clientSecret          String
+  name                  String
+  description           String?
+  organizationId        String
+  
+  // OAuth2 configuration
+  redirectUris          Json     // Array of allowed redirect URIs
+  grantTypes            Json     // Array of allowed grant types
+  scopes                Json     // Array of allowed scopes
+  tokenEndpointAuthMethod String @default("client_secret_basic")
+  
+  // SMART on FHIR fields
+  smartEnabled          Boolean  @default(false)
+  fhirContext           Json?    // FHIR context requirements
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("oauth_clients")
+}
+
+// Comprehensive audit logging for HIPAA compliance
+model AuditLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  organizationId   String?
+  action           String   // LOGIN_SUCCESS, LOGIN_FAILED, PASSWORD_CHANGE, etc.
+  resource         String   // AUTH, USER, ORGANIZATION, etc.
+  resourceId       String?
+  details          Json?    // Additional event details
+  
+  // Request context
+  ipAddress        String?
+  userAgent        String?
+  sessionId        String?
+  
+  // Compliance fields
+  timestamp        DateTime @default(now())
+  severity         String   @default("info") // info, warning, error, critical
+  category         String   @default("authentication") // authentication, authorization, data_access
+  
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, timestamp])
+  @@index([userId, timestamp])
+  @@index([action, timestamp])
+  @@map("audit_logs")
+}
+
+// Verification tokens for email verification
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Rate limiting and security
+model RateLimit {
+  id         String   @id @default(cuid())
+  key        String   @unique // IP address or user ID
+  count      Int      @default(1)
+  resetTime  DateTime
+  
+  @@map("rate_limits")
+}
