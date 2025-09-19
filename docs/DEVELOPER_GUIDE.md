@@ -71,16 +71,16 @@ Hardy Auth Service is a compliance-first, enterprise-grade authentication servic
 
 ### Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | Next.js 14 (App Router) | React framework with SSR/SSG |
-| **Authentication** | Better Auth | Core authentication framework |
-| **API** | tRPC | Type-safe API layer |
-| **Database** | PostgreSQL 15 | Primary data store with RLS |
-| **ORM** | Prisma | Type-safe database client |
-| **Cache** | Redis | Session storage and caching |
-| **Container** | Docker | Containerization |
-| **Proxy** | NGINX | Reverse proxy and SSL |
+| Layer              | Technology              | Purpose                       |
+| ------------------ | ----------------------- | ----------------------------- |
+| **Frontend**       | Next.js 14 (App Router) | React framework with SSR/SSG  |
+| **Authentication** | Better Auth             | Core authentication framework |
+| **API**            | tRPC                    | Type-safe API layer           |
+| **Database**       | PostgreSQL 15           | Primary data store with RLS   |
+| **ORM**            | Prisma                  | Type-safe database client     |
+| **Cache**          | Redis                   | Session storage and caching   |
+| **Container**      | Docker                  | Containerization              |
+| **Proxy**          | NGINX                   | Reverse proxy and SSL         |
 
 ### Security Architecture
 
@@ -256,100 +256,101 @@ docker-compose down
 ### Authentication API (tRPC)
 
 #### Base URL
+
 ```
 http://localhost:3001/api/trpc
 ```
 
 #### Authentication Procedures
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
-| `auth.signUp` | Mutation | Register new user | `{ email, password, firstName?, lastName?, organizationId?, licenseNumber?, npiNumber?, specialties? }` |
-| `auth.signIn` | Mutation | User login | `{ email, password }` |
-| `auth.signOut` | Mutation | Logout user | `{ sessionToken }` |
-| `auth.verifyEmail` | Mutation | Verify email address | `{ token }` |
-| `auth.resendVerification` | Mutation | Resend verification email | `{ email }` |
-| `auth.resetPassword` | Mutation | Request password reset | `{ email }` |
-| `auth.changePassword` | Mutation | Change password | `{ currentPassword, newPassword }` |
-| `auth.session.get` | Query | Get current session | - |
-| `auth.session.refresh` | Mutation | Refresh session | `{ refreshToken }` |
-| `auth.session.revoke` | Mutation | Revoke session | `{ sessionToken }` |
-| `auth.sessions.list` | Query | List all sessions | - |
+| Procedure                 | Type     | Description               | Input Schema                                                                                            |
+| ------------------------- | -------- | ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `auth.signUp`             | Mutation | Register new user         | `{ email, password, firstName?, lastName?, organizationId?, licenseNumber?, npiNumber?, specialties? }` |
+| `auth.signIn`             | Mutation | User login                | `{ email, password }`                                                                                   |
+| `auth.signOut`            | Mutation | Logout user               | `{ sessionToken }`                                                                                      |
+| `auth.verifyEmail`        | Mutation | Verify email address      | `{ token }`                                                                                             |
+| `auth.resendVerification` | Mutation | Resend verification email | `{ email }`                                                                                             |
+| `auth.resetPassword`      | Mutation | Request password reset    | `{ email }`                                                                                             |
+| `auth.changePassword`     | Mutation | Change password           | `{ currentPassword, newPassword }`                                                                      |
+| `auth.session.get`        | Query    | Get current session       | -                                                                                                       |
+| `auth.session.refresh`    | Mutation | Refresh session           | `{ refreshToken }`                                                                                      |
+| `auth.session.revoke`     | Mutation | Revoke session            | `{ sessionToken }`                                                                                      |
+| `auth.sessions.list`      | Query    | List all sessions         | -                                                                                                       |
 
 #### Two-Factor Authentication
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
-| `auth.twoFactor.setup` | Mutation | Setup 2FA | `{ type: 'totp' \| 'sms' }` |
-| `auth.twoFactor.verify` | Mutation | Verify 2FA code | `{ code, type }` |
-| `auth.twoFactor.disable` | Mutation | Disable 2FA | `{ password }` |
-| `auth.twoFactor.backupCodes` | Query | Get backup codes | - |
-| `auth.twoFactor.regenerateBackupCodes` | Mutation | New backup codes | - |
+| Procedure                              | Type     | Description      | Input Schema                |
+| -------------------------------------- | -------- | ---------------- | --------------------------- |
+| `auth.twoFactor.setup`                 | Mutation | Setup 2FA        | `{ type: 'totp' \| 'sms' }` |
+| `auth.twoFactor.verify`                | Mutation | Verify 2FA code  | `{ code, type }`            |
+| `auth.twoFactor.disable`               | Mutation | Disable 2FA      | `{ password }`              |
+| `auth.twoFactor.backupCodes`           | Query    | Get backup codes | -                           |
+| `auth.twoFactor.regenerateBackupCodes` | Mutation | New backup codes | -                           |
 
 #### Passkey/WebAuthn
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
-| `auth.passkey.register` | Mutation | Register passkey | `{ deviceName, challenge }` |
+| Procedure                   | Type     | Description               | Input Schema                  |
+| --------------------------- | -------- | ------------------------- | ----------------------------- |
+| `auth.passkey.register`     | Mutation | Register passkey          | `{ deviceName, challenge }`   |
 | `auth.passkey.authenticate` | Mutation | Authenticate with passkey | `{ credentialId, assertion }` |
-| `auth.passkey.list` | Query | List passkeys | - |
-| `auth.passkey.delete` | Mutation | Remove passkey | `{ passkeyId }` |
+| `auth.passkey.list`         | Query    | List passkeys             | -                             |
+| `auth.passkey.delete`       | Mutation | Remove passkey            | `{ passkeyId }`               |
 
 #### Magic Links
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
+| Procedure                | Type     | Description        | Input Schema                 |
+| ------------------------ | -------- | ------------------ | ---------------------------- |
 | `auth.magicLink.request` | Mutation | Request magic link | `{ email, organizationId? }` |
-| `auth.magicLink.verify` | Mutation | Verify magic link | `{ token }` |
+| `auth.magicLink.verify`  | Mutation | Verify magic link  | `{ token }`                  |
 
 ### Organization Management API
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
-| `organization.create` | Mutation | Create organization | `{ name, slug, organizationType, practiceNpi?, complianceSettings? }` |
-| `organization.update` | Mutation | Update organization | `{ id, ...updates }` |
-| `organization.get` | Query | Get organization | `{ id \| slug }` |
-| `organization.list` | Query | List organizations | `{ limit?, offset? }` |
-| `organization.delete` | Mutation | Delete organization | `{ id }` |
-| `organization.inviteMember` | Mutation | Invite member | `{ email, role, permissions? }` |
-| `organization.removeMember` | Mutation | Remove member | `{ memberId }` |
-| `organization.updateMember` | Mutation | Update member | `{ memberId, role?, permissions? }` |
-| `organization.members` | Query | List members | `{ organizationId }` |
+| Procedure                   | Type     | Description         | Input Schema                                                          |
+| --------------------------- | -------- | ------------------- | --------------------------------------------------------------------- |
+| `organization.create`       | Mutation | Create organization | `{ name, slug, organizationType, practiceNpi?, complianceSettings? }` |
+| `organization.update`       | Mutation | Update organization | `{ id, ...updates }`                                                  |
+| `organization.get`          | Query    | Get organization    | `{ id \| slug }`                                                      |
+| `organization.list`         | Query    | List organizations  | `{ limit?, offset? }`                                                 |
+| `organization.delete`       | Mutation | Delete organization | `{ id }`                                                              |
+| `organization.inviteMember` | Mutation | Invite member       | `{ email, role, permissions? }`                                       |
+| `organization.removeMember` | Mutation | Remove member       | `{ memberId }`                                                        |
+| `organization.updateMember` | Mutation | Update member       | `{ memberId, role?, permissions? }`                                   |
+| `organization.members`      | Query    | List members        | `{ organizationId }`                                                  |
 
 ### Admin API
 
-| Procedure | Type | Description | Input Schema |
-|-----------|------|-------------|--------------|
-| `admin.users.list` | Query | List all users | `{ organizationId?, role?, limit?, offset? }` |
-| `admin.users.get` | Query | Get user details | `{ userId }` |
-| `admin.users.update` | Mutation | Update user | `{ userId, ...updates }` |
-| `admin.users.delete` | Mutation | Delete user | `{ userId }` |
-| `admin.users.suspend` | Mutation | Suspend user | `{ userId, reason }` |
-| `admin.users.unlock` | Mutation | Unlock user | `{ userId }` |
-| `admin.auditLogs` | Query | Get audit logs | `{ filters, dateRange }` |
-| `admin.metrics` | Query | Get metrics | `{ organizationId?, period }` |
-| `admin.settings.get` | Query | Get settings | - |
-| `admin.settings.update` | Mutation | Update settings | `{ ...settings }` |
+| Procedure               | Type     | Description      | Input Schema                                  |
+| ----------------------- | -------- | ---------------- | --------------------------------------------- |
+| `admin.users.list`      | Query    | List all users   | `{ organizationId?, role?, limit?, offset? }` |
+| `admin.users.get`       | Query    | Get user details | `{ userId }`                                  |
+| `admin.users.update`    | Mutation | Update user      | `{ userId, ...updates }`                      |
+| `admin.users.delete`    | Mutation | Delete user      | `{ userId }`                                  |
+| `admin.users.suspend`   | Mutation | Suspend user     | `{ userId, reason }`                          |
+| `admin.users.unlock`    | Mutation | Unlock user      | `{ userId }`                                  |
+| `admin.auditLogs`       | Query    | Get audit logs   | `{ filters, dateRange }`                      |
+| `admin.metrics`         | Query    | Get metrics      | `{ organizationId?, period }`                 |
+| `admin.settings.get`    | Query    | Get settings     | -                                             |
+| `admin.settings.update` | Mutation | Update settings  | `{ ...settings }`                             |
 
 ### OAuth2 API
 
-| Endpoint | Method | Description | Parameters |
-|----------|--------|-------------|------------|
-| `/api/oauth/authorize` | GET | Authorization endpoint | `client_id, redirect_uri, response_type, scope, state` |
-| `/api/oauth/token` | POST | Token endpoint | `grant_type, code, client_id, client_secret` |
-| `/api/oauth/introspect` | POST | Token introspection | `token, token_type_hint` |
-| `/api/oauth/revoke` | POST | Revoke token | `token, token_type_hint` |
-| `/api/oauth/userinfo` | GET | User information | Bearer token in header |
-| `/api/oauth/.well-known/openid-configuration` | GET | OpenID configuration | - |
+| Endpoint                                      | Method | Description            | Parameters                                             |
+| --------------------------------------------- | ------ | ---------------------- | ------------------------------------------------------ |
+| `/api/oauth/authorize`                        | GET    | Authorization endpoint | `client_id, redirect_uri, response_type, scope, state` |
+| `/api/oauth/token`                            | POST   | Token endpoint         | `grant_type, code, client_id, client_secret`           |
+| `/api/oauth/introspect`                       | POST   | Token introspection    | `token, token_type_hint`                               |
+| `/api/oauth/revoke`                           | POST   | Revoke token           | `token, token_type_hint`                               |
+| `/api/oauth/userinfo`                         | GET    | User information       | Bearer token in header                                 |
+| `/api/oauth/.well-known/openid-configuration` | GET    | OpenID configuration   | -                                                      |
 
 ### SMART on FHIR API
 
-| Endpoint | Method | Description | Parameters |
-|----------|--------|-------------|------------|
-| `/api/fhir/metadata` | GET | Capability statement | - |
-| `/api/fhir/authorize` | GET | SMART authorization | `response_type, client_id, scope, redirect_uri, aud, launch` |
-| `/api/fhir/token` | POST | SMART token | `grant_type, code, client_id, redirect_uri` |
-| `/api/fhir/.well-known/smart-configuration` | GET | SMART configuration | - |
+| Endpoint                                    | Method | Description          | Parameters                                                   |
+| ------------------------------------------- | ------ | -------------------- | ------------------------------------------------------------ |
+| `/api/fhir/metadata`                        | GET    | Capability statement | -                                                            |
+| `/api/fhir/authorize`                       | GET    | SMART authorization  | `response_type, client_id, scope, redirect_uri, aud, launch` |
+| `/api/fhir/token`                           | POST   | SMART token          | `grant_type, code, client_id, redirect_uri`                  |
+| `/api/fhir/.well-known/smart-configuration` | GET    | SMART configuration  | -                                                            |
 
 ## API Usage Examples
 
@@ -358,19 +359,19 @@ http://localhost:3001/api/trpc
 #### Setup tRPC Client
 
 ```typescript
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import superjson from 'superjson';
-import type { AppRouter } from '@hardy/auth-service';
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import superjson from "superjson";
+import type { AppRouter } from "@hardy/auth-service";
 
 const client = createTRPCProxyClient<AppRouter>({
   transformer: superjson,
   links: [
     httpBatchLink({
-      url: 'http://localhost:3001/api/trpc',
+      url: "http://localhost:3001/api/trpc",
       headers() {
         return {
           authorization: `Bearer ${getAuthToken()}`,
-          'x-tenant-id': getTenantId(),
+          "x-tenant-id": getTenantId(),
         };
       },
     }),
@@ -385,41 +386,42 @@ const client = createTRPCProxyClient<AppRouter>({
 async function registerUser() {
   try {
     const user = await client.auth.signUp.mutate({
-      email: 'doctor@hospital.com',
-      password: 'SecurePassword123!',
-      firstName: 'John',
-      lastName: 'Doe',
-      organizationId: 'org_hospital_123',
-      licenseNumber: 'MD12345',
-      npiNumber: '1234567890',
-      specialties: ['Cardiology', 'Internal Medicine']
+      email: "doctor@hospital.com",
+      password: "SecurePassword123!",
+      firstName: "John",
+      lastName: "Doe",
+      organizationId: "org_hospital_123",
+      licenseNumber: "MD12345",
+      npiNumber: "1234567890",
+      specialties: ["Cardiology", "Internal Medicine"],
     });
 
-    console.log('User registered:', user.id);
+    console.log("User registered:", user.id);
     return user;
   } catch (error) {
-    console.error('Registration failed:', error);
+    console.error("Registration failed:", error);
   }
 }
 
 // 2. Setup Two-Factor Authentication
 async function setupTwoFactor(userId: string) {
   // Generate TOTP secret
-  const { secret, qrCode, backupCodes } = await client.auth.twoFactor.setup.mutate({
-    type: 'totp'
-  });
+  const { secret, qrCode, backupCodes } =
+    await client.auth.twoFactor.setup.mutate({
+      type: "totp",
+    });
 
   // Display QR code to user
-  console.log('Scan this QR code:', qrCode);
-  console.log('Backup codes:', backupCodes);
+  console.log("Scan this QR code:", qrCode);
+  console.log("Backup codes:", backupCodes);
 
   // User scans QR code and enters verification code
-  const verificationCode = await getUserInput('Enter verification code:');
+  const verificationCode = await getUserInput("Enter verification code:");
 
   // Verify and enable 2FA
   const result = await client.auth.twoFactor.verify.mutate({
     code: verificationCode,
-    type: 'totp'
+    type: "totp",
   });
 
   return result;
@@ -429,19 +431,19 @@ async function setupTwoFactor(userId: string) {
 async function loginWith2FA() {
   // Initial login
   const loginResult = await client.auth.signIn.mutate({
-    email: 'doctor@hospital.com',
-    password: 'SecurePassword123!'
+    email: "doctor@hospital.com",
+    password: "SecurePassword123!",
   });
 
   if (loginResult.requiresTwoFactor) {
     // Get 2FA code from user
-    const code = await getUserInput('Enter 2FA code:');
+    const code = await getUserInput("Enter 2FA code:");
 
     // Verify 2FA
     const session = await client.auth.twoFactor.verify.mutate({
       userId: loginResult.userId,
       code,
-      type: 'totp'
+      type: "totp",
     });
 
     // Store session token
@@ -459,13 +461,13 @@ async function registerPasskey() {
 
   // Create credential using WebAuthn API
   const credential = await navigator.credentials.create({
-    publicKey: options
+    publicKey: options,
   });
 
   // Register passkey with server
   const passkey = await client.auth.passkey.register.mutate({
-    deviceName: 'MacBook Pro Touch ID',
-    credential: credential.response
+    deviceName: "MacBook Pro Touch ID",
+    credential: credential.response,
   });
 
   return passkey;
@@ -476,8 +478,8 @@ async function registerPasskey() {
 
 ```typescript
 // auth-provider.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createTRPCProxyClient } from '@trpc/client';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { createTRPCProxyClient } from "@trpc/client";
 
 interface AuthContextType {
   user: User | null;
@@ -499,8 +501,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for existing session
-    trpc.auth.session.get.query()
-      .then(session => setUser(session?.user || null))
+    trpc.auth.session.get
+      .query()
+      .then((session) => setUser(session?.user || null))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -513,7 +516,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const session = await trpc.auth.twoFactor.verify.mutate({
         userId: result.userId,
         code,
-        type: 'totp'
+        type: "totp",
       });
       setUser(session.user);
     } else {
@@ -529,7 +532,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (data: SignUpData) => {
     const user = await trpc.auth.signUp.mutate(data);
     // Prompt user to verify email
-    console.log('Please check your email to verify your account');
+    console.log("Please check your email to verify your account");
   };
 
   return (
@@ -542,7 +545,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
@@ -684,7 +687,7 @@ CMD ["npm", "start"]
 
 ```yaml
 # docker-compose.prod.yml
-version: '3.8'
+version: "3.8"
 
 services:
   auth-service:
@@ -778,47 +781,47 @@ spec:
         app: hardy-auth
     spec:
       containers:
-      - name: auth-service
-        image: hardy/auth-service:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: auth-secrets
-              key: database-url
-        - name: BETTER_AUTH_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: auth-secrets
-              key: auth-secret
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: auth-secrets
-              key: redis-url
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /api/ready
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: auth-service
+          image: hardy/auth-service:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: database-url
+            - name: BETTER_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: auth-secret
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: redis-url
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -829,9 +832,9 @@ spec:
   selector:
     app: hardy-auth
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 3000
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
   type: LoadBalancer
 ```
 
@@ -877,7 +880,10 @@ spec:
         }
       ],
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:3000/api/health || exit 1"
+        ],
         "interval": 30,
         "timeout": 5,
         "retries": 3,
@@ -1058,8 +1064,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -1098,15 +1104,15 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
       - name: Run npm audit
         run: npm audit --audit-level=moderate
@@ -1178,7 +1184,7 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: 'Hardy Auth Service deployed successfully to production'
+          text: "Hardy Auth Service deployed successfully to production"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
         if: success()
 
@@ -1211,8 +1217,8 @@ jobs:
       - name: Notify rollback
         uses: 8398a7/action-slack@v3
         with:
-          status: 'failure'
-          text: 'Hardy Auth Service deployment failed. Rolling back to previous version.'
+          status: "failure"
+          text: "Hardy Auth Service deployment failed. Rolling back to previous version."
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
@@ -1337,62 +1343,62 @@ rollback:production:
 
 ```typescript
 // src/lib/__tests__/auth.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { auth } from '../auth';
-import { PrismaClient } from '@prisma/client';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { auth } from "../auth";
+import { PrismaClient } from "@prisma/client";
 
-vi.mock('@prisma/client');
+vi.mock("@prisma/client");
 
-describe('Authentication Service', () => {
+describe("Authentication Service", () => {
   let prisma: PrismaClient;
 
   beforeEach(() => {
     prisma = new PrismaClient();
   });
 
-  describe('signUp', () => {
-    it('should create a new user with encrypted password', async () => {
+  describe("signUp", () => {
+    it("should create a new user with encrypted password", async () => {
       const userData = {
-        email: 'test@example.com',
-        password: 'SecurePassword123!',
-        firstName: 'Test',
-        lastName: 'User'
+        email: "test@example.com",
+        password: "SecurePassword123!",
+        firstName: "Test",
+        lastName: "User",
       };
 
       const result = await auth.signUp(userData);
 
-      expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty("id");
       expect(result.email).toBe(userData.email);
       expect(result.password).not.toBe(userData.password);
     });
 
-    it('should reject weak passwords', async () => {
+    it("should reject weak passwords", async () => {
       const userData = {
-        email: 'test@example.com',
-        password: 'weak'
+        email: "test@example.com",
+        password: "weak",
       };
 
-      await expect(auth.signUp(userData)).rejects.toThrow('Password too weak');
+      await expect(auth.signUp(userData)).rejects.toThrow("Password too weak");
     });
   });
 
-  describe('signIn', () => {
-    it('should authenticate valid credentials', async () => {
+  describe("signIn", () => {
+    it("should authenticate valid credentials", async () => {
       const credentials = {
-        email: 'test@example.com',
-        password: 'SecurePassword123!'
+        email: "test@example.com",
+        password: "SecurePassword123!",
       };
 
       const session = await auth.signIn(credentials);
 
-      expect(session).toHaveProperty('token');
-      expect(session).toHaveProperty('user');
+      expect(session).toHaveProperty("token");
+      expect(session).toHaveProperty("user");
     });
 
-    it('should handle 2FA if enabled', async () => {
+    it("should handle 2FA if enabled", async () => {
       const credentials = {
-        email: '2fa@example.com',
-        password: 'SecurePassword123!'
+        email: "2fa@example.com",
+        password: "SecurePassword123!",
       };
 
       const result = await auth.signIn(credentials);
@@ -1408,44 +1414,44 @@ describe('Authentication Service', () => {
 
 ```typescript
 // src/test/integration.test.ts
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTRPCMsw } from 'msw-trpc';
-import { setupServer } from 'msw/node';
-import { appRouter } from '../server/routers';
-import type { AppRouter } from '../server/routers';
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { createTRPCMsw } from "msw-trpc";
+import { setupServer } from "msw/node";
+import { appRouter } from "../server/routers";
+import type { AppRouter } from "../server/routers";
 
 const server = setupServer();
 
 beforeAll(() => server.listen());
 afterAll(() => server.close());
 
-describe('API Integration Tests', () => {
-  describe('Complete Authentication Flow', () => {
-    it('should handle full signup to login flow', async () => {
+describe("API Integration Tests", () => {
+  describe("Complete Authentication Flow", () => {
+    it("should handle full signup to login flow", async () => {
       // 1. Register user
       const user = await client.auth.signUp.mutate({
-        email: 'integration@test.com',
-        password: 'IntegrationTest123!',
-        organizationId: 'test_org'
+        email: "integration@test.com",
+        password: "IntegrationTest123!",
+        organizationId: "test_org",
       });
 
       expect(user.emailVerified).toBe(false);
 
       // 2. Verify email
-      const verificationToken = 'test_verification_token';
+      const verificationToken = "test_verification_token";
       await client.auth.verifyEmail.mutate({ token: verificationToken });
 
       // 3. Login
       const session = await client.auth.signIn.mutate({
-        email: 'integration@test.com',
-        password: 'IntegrationTest123!'
+        email: "integration@test.com",
+        password: "IntegrationTest123!",
       });
 
       expect(session.user.emailVerified).toBe(true);
 
       // 4. Setup 2FA
       const { secret, qrCode } = await client.auth.twoFactor.setup.mutate({
-        type: 'totp'
+        type: "totp",
       });
 
       expect(secret).toBeDefined();
@@ -1453,17 +1459,17 @@ describe('API Integration Tests', () => {
     });
   });
 
-  describe('Multi-tenant Operations', () => {
-    it('should isolate data between tenants', async () => {
+  describe("Multi-tenant Operations", () => {
+    it("should isolate data between tenants", async () => {
       // Create two organizations
       const org1 = await client.organization.create.mutate({
-        name: 'Hospital A',
-        slug: 'hospital-a'
+        name: "Hospital A",
+        slug: "hospital-a",
       });
 
       const org2 = await client.organization.create.mutate({
-        name: 'Hospital B',
-        slug: 'hospital-b'
+        name: "Hospital B",
+        slug: "hospital-b",
       });
 
       // Create users in different orgs
@@ -1472,7 +1478,7 @@ describe('API Integration Tests', () => {
 
       // Verify isolation
       const org1Users = await client.admin.users.list.query({
-        organizationId: org1.id
+        organizationId: org1.id,
       });
 
       expect(org1Users).not.toContainEqual(
@@ -1487,42 +1493,42 @@ describe('API Integration Tests', () => {
 
 ```typescript
 // e2e/auth.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Authentication E2E', () => {
-  test('complete signup flow', async ({ page }) => {
-    await page.goto('http://localhost:3001/signup');
+test.describe("Authentication E2E", () => {
+  test("complete signup flow", async ({ page }) => {
+    await page.goto("http://localhost:3001/signup");
 
     // Fill signup form
-    await page.fill('[name="email"]', 'e2e@test.com');
-    await page.fill('[name="password"]', 'E2ETestPassword123!');
-    await page.fill('[name="confirmPassword"]', 'E2ETestPassword123!');
-    await page.fill('[name="firstName"]', 'E2E');
-    await page.fill('[name="lastName"]', 'Test');
+    await page.fill('[name="email"]', "e2e@test.com");
+    await page.fill('[name="password"]', "E2ETestPassword123!");
+    await page.fill('[name="confirmPassword"]', "E2ETestPassword123!");
+    await page.fill('[name="firstName"]', "E2E");
+    await page.fill('[name="lastName"]', "Test");
 
     // Submit form
     await page.click('[type="submit"]');
 
     // Check for success message
-    await expect(page.locator('.success-message')).toContainText(
-      'Please check your email to verify your account'
+    await expect(page.locator(".success-message")).toContainText(
+      "Please check your email to verify your account"
     );
   });
 
-  test('login with 2FA', async ({ page }) => {
-    await page.goto('http://localhost:3001/login');
+  test("login with 2FA", async ({ page }) => {
+    await page.goto("http://localhost:3001/login");
 
     // Login
-    await page.fill('[name="email"]', '2fa@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
+    await page.fill('[name="email"]', "2fa@test.com");
+    await page.fill('[name="password"]', "TestPassword123!");
     await page.click('[type="submit"]');
 
     // Enter 2FA code
-    await page.fill('[name="code"]', '123456');
+    await page.fill('[name="code"]', "123456");
     await page.click('[type="submit"]');
 
     // Verify redirect to dashboard
-    await expect(page).toHaveURL('http://localhost:3001/dashboard');
+    await expect(page).toHaveURL("http://localhost:3001/dashboard");
   });
 });
 ```
@@ -1532,10 +1538,12 @@ test.describe('Authentication E2E', () => {
 ### Environment Security
 
 1. **Never commit secrets to version control**
+
    - Use `.env.local` for local development
    - Use secrets management services in production (AWS Secrets Manager, HashiCorp Vault)
 
 2. **Rotate secrets regularly**
+
    - Auth secrets every 90 days
    - Database passwords every 60 days
    - API keys every 30 days
@@ -1548,21 +1556,24 @@ test.describe('Authentication E2E', () => {
 ### Application Security
 
 1. **Input Validation**
+
    ```typescript
    // Always validate and sanitize input
    const emailSchema = z.string().email().toLowerCase().trim();
-   const passwordSchema = z.string()
+   const passwordSchema = z
+     .string()
      .min(12)
      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/);
    ```
 
 2. **Rate Limiting**
+
    ```typescript
    // Implement progressive rate limiting
    const rateLimits = {
-     signin: { window: 60000, max: 5 },      // 5 attempts per minute
-     signup: { window: 3600000, max: 10 },   // 10 per hour
-     passwordReset: { window: 3600000, max: 3 } // 3 per hour
+     signin: { window: 60000, max: 5 }, // 5 attempts per minute
+     signup: { window: 3600000, max: 10 }, // 10 per hour
+     passwordReset: { window: 3600000, max: 3 }, // 3 per hour
    };
    ```
 
@@ -1572,15 +1583,16 @@ test.describe('Authentication E2E', () => {
    const sessionConfig = {
      httpOnly: true,
      secure: true, // HTTPS only
-     sameSite: 'strict',
+     sameSite: "strict",
      maxAge: 1800000, // 30 minutes
-     rolling: true // Extend on activity
+     rolling: true, // Extend on activity
    };
    ```
 
 ### Database Security
 
 1. **Row-Level Security (RLS)**
+
    ```sql
    -- Enable RLS on all tables
    ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -1592,6 +1604,7 @@ test.describe('Authentication E2E', () => {
    ```
 
 2. **Encryption at Rest**
+
    ```sql
    -- Enable encryption for sensitive columns
    CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1631,6 +1644,7 @@ test.describe('Authentication E2E', () => {
 **Problem**: `ECONNREFUSED` when connecting to database
 
 **Solution**:
+
 ```bash
 # Check if PostgreSQL is running
 docker ps | grep postgres
@@ -1647,6 +1661,7 @@ echo $DATABASE_URL
 **Problem**: Users getting logged out too frequently
 
 **Solution**:
+
 ```typescript
 // Adjust session configuration
 SESSION_MAX_AGE=3600  # Increase to 1 hour
@@ -1658,6 +1673,7 @@ SESSION_UPDATE_AGE=600 # Update every 10 minutes
 **Problem**: TOTP codes not being accepted
 
 **Solution**:
+
 ```bash
 # Check server time synchronization
 timedatectl status
@@ -1671,6 +1687,7 @@ sudo ntpdate -s time.nist.gov
 **Problem**: Verification emails not being sent
 
 **Solution**:
+
 ```bash
 # Test SMTP connection
 npm run test:email
@@ -1687,6 +1704,7 @@ nslookup -type=txt _dmarc.yourdomain.com
 **Problem**: Legitimate users being rate limited
 
 **Solution**:
+
 ```typescript
 // Adjust rate limits in environment
 RATE_LIMIT_WINDOW_MS=60000
@@ -1713,29 +1731,29 @@ npm run dev:debug
 
 ```typescript
 // API health check endpoint
-app.get('/api/health', async (req, res) => {
+app.get("/api/health", async (req, res) => {
   const checks = {
-    service: 'healthy',
-    database: 'unknown',
-    redis: 'unknown',
-    timestamp: new Date().toISOString()
+    service: "healthy",
+    database: "unknown",
+    redis: "unknown",
+    timestamp: new Date().toISOString(),
   };
 
   try {
     await prisma.$queryRaw`SELECT 1`;
-    checks.database = 'healthy';
+    checks.database = "healthy";
   } catch (error) {
-    checks.database = 'unhealthy';
+    checks.database = "unhealthy";
   }
 
   try {
     await redis.ping();
-    checks.redis = 'healthy';
+    checks.redis = "healthy";
   } catch (error) {
-    checks.redis = 'unhealthy';
+    checks.redis = "unhealthy";
   }
 
-  const isHealthy = Object.values(checks).every(v => v !== 'unhealthy');
+  const isHealthy = Object.values(checks).every((v) => v !== "unhealthy");
   res.status(isHealthy ? 200 : 503).json(checks);
 });
 ```
@@ -1746,21 +1764,21 @@ Set up monitoring with Datadog, New Relic, or CloudWatch:
 
 ```typescript
 // Datadog APM integration
-import tracer from 'dd-trace';
+import tracer from "dd-trace";
 tracer.init({
   env: process.env.NODE_ENV,
-  service: 'hardy-auth',
-  version: process.env.APP_VERSION
+  service: "hardy-auth",
+  version: process.env.APP_VERSION,
 });
 
 // Custom metrics
-import { StatsD } from 'node-statsd';
+import { StatsD } from "node-statsd";
 const metrics = new StatsD();
 
 // Track authentication events
-metrics.increment('auth.login.success');
-metrics.increment('auth.login.failed');
-metrics.timing('auth.session.duration', sessionDuration);
+metrics.increment("auth.login.success");
+metrics.increment("auth.login.failed");
+metrics.timing("auth.session.duration", sessionDuration);
 ```
 
 ## Support
@@ -1770,7 +1788,7 @@ For additional help and support:
 - **Documentation**: [https://docs.mlpipes.ai/hardy](https://docs.mlpipes.ai/hardy)
 - **GitHub Issues**: [https://github.com/mlpipes/hardy/issues](https://github.com/mlpipes/hardy/issues)
 - **Email Support**: [support@mlpipes.ai](mailto:support@mlpipes.ai)
-- **Community Discord**: [https://discord.gg/hardy](https://discord.gg/hardy)
+- **Community Discord**: [https://discord.gg/67Px75xa](https://discord.gg/67Px75xa)
 
 ---
 
