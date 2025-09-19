@@ -1,18 +1,18 @@
-# MLPipes Auth Service Docker Compose
+# Hardy Auth Service Docker Compose
 # HIPAA, SOC 2 Type II, and HITRUST Ready Authentication Infrastructure
 
 version: '3.8'
 
 services:
-  # MLPipes Authentication Service
+  # Hardy Authentication Service
   auth-service:
     build: .
-    container_name: mlpipes-auth-service
+    container_name: hardy-auth-service
     ports:
       - "3001:3000"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://auth_service:auth_password@auth-db:5432/mlpipes_auth
+      - DATABASE_URL=postgresql://auth_service:auth_password@auth-db:5432/hardy_auth
       - BETTER_AUTH_SECRET=your-32-character-secret-key-here-change-in-production
       - BETTER_AUTH_URL=http://localhost:3001
       - REDIS_URL=redis://auth-redis:6379
@@ -40,11 +40,11 @@ services:
   # Dedicated PostgreSQL Database for Authentication
   auth-db:
     image: postgres:15-alpine
-    container_name: mlpipes-auth-db
+    container_name: hardy-auth-db
     ports:
-      - "5434:5432"  # MLPipes Auth dedicated database port
+      - "5434:5432"  # Hardy Auth dedicated database port
     environment:
-      - POSTGRES_DB=mlpipes_auth
+      - POSTGRES_DB=hardy_auth
       - POSTGRES_USER=auth_service
       - POSTGRES_PASSWORD=auth_password
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
@@ -55,7 +55,7 @@ services:
       - auth-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_service -d mlpipes_auth"]
+      test: ["CMD-SHELL", "pg_isready -U auth_service -d hardy_auth"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -64,9 +64,9 @@ services:
   # Redis for Session Storage (Optional but Recommended)
   auth-redis:
     image: redis:7-alpine
-    container_name: mlpipes-auth-redis
+    container_name: hardy-auth-redis
     ports:
-      - "6381:6379"  # MLPipes Auth Redis port
+      - "6381:6379"  # Hardy Auth Redis port
     volumes:
       - auth_redis_data:/data
     networks:
@@ -83,7 +83,7 @@ services:
   # NGINX Reverse Proxy with SSL (Production)
   auth-nginx:
     image: nginx:alpine
-    container_name: mlpipes-auth-nginx
+    container_name: hardy-auth-nginx
     ports:
       - "443:443"
       - "80:80"
@@ -101,9 +101,9 @@ services:
   # Database Administration (Development)
   auth-adminer:
     image: adminer:latest
-    container_name: mlpipes-auth-adminer
+    container_name: hardy-auth-adminer
     ports:
-      - "8081:8080"  # MLPipes Auth Adminer port
+      - "8081:8080"  # Hardy Auth Adminer port
     environment:
       - ADMINER_DEFAULT_SERVER=auth-db
     depends_on:
@@ -117,15 +117,15 @@ services:
 volumes:
   auth_db_data:
     driver: local
-    name: mlpipes_auth_db_data
+    name: hardy_auth_db_data
   auth_redis_data:
     driver: local
-    name: mlpipes_auth_redis_data
+    name: hardy_auth_redis_data
 
 networks:
   auth-network:
     driver: bridge
-    name: mlpipes_auth_network
+    name: hardy_auth_network
 
 # Health check script
 x-healthcheck-common: &healthcheck-common

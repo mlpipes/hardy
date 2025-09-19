@@ -1,0 +1,1781 @@
+# Hardy Auth Service - Developer Guide
+
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [Architecture Overview](#architecture-overview)
+3. [Quick Start Guide](#quick-start-guide)
+4. [API Reference](#api-reference)
+5. [API Usage Examples](#api-usage-examples)
+6. [Deployment Guide](#deployment-guide)
+7. [CI/CD Pipeline](#cicd-pipeline)
+8. [Testing Strategy](#testing-strategy)
+9. [Security Best Practices](#security-best-practices)
+10. [Troubleshooting](#troubleshooting)
+
+## Introduction
+
+Hardy Auth Service is a compliance-first, enterprise-grade authentication service built on Better Auth framework, designed specifically for healthcare applications. This guide provides comprehensive documentation for developers working with or deploying the Hardy Auth Service.
+
+### Key Features
+
+- **HIPAA Compliant**: Built with healthcare compliance requirements from the ground up
+- **Multi-tenant Architecture**: Complete tenant isolation with row-level security
+- **Modern Authentication**: Passkeys, 2FA, magic links, and OAuth2
+- **SMART on FHIR**: Healthcare interoperability with major EHR systems
+- **Enterprise Ready**: Audit logging, rate limiting, and session management
+
+## Architecture Overview
+
+### System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Applications                   │
+│  (Web App, Mobile App, Healthcare Systems, EHR Integrations) │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+        ┌───────────────────────────────────────────┐
+        │           NGINX Reverse Proxy             │
+        │         (SSL Termination, CORS)           │
+        └───────────────────────────────────────────┘
+                                │
+                                ▼
+        ┌───────────────────────────────────────────┐
+        │       MLPipes Auth Service (Next.js)      │
+        │                                           │
+        │  ┌─────────────────────────────────┐     │
+        │  │     Better Auth Framework       │     │
+        │  │  (Authentication & Sessions)    │     │
+        │  └─────────────────────────────────┘     │
+        │                                           │
+        │  ┌─────────────────────────────────┐     │
+        │  │        tRPC API Layer           │     │
+        │  │  (Type-safe API endpoints)      │     │
+        │  └─────────────────────────────────┘     │
+        │                                           │
+        │  ┌─────────────────────────────────┐     │
+        │  │     Business Logic Layer        │     │
+        │  │  (Services, Validators, Utils)  │     │
+        │  └─────────────────────────────────┘     │
+        └───────────────────────────────────────────┘
+                        │              │
+                        ▼              ▼
+        ┌──────────────────┐  ┌──────────────────┐
+        │   PostgreSQL     │  │      Redis       │
+        │   (Primary DB)   │  │ (Session Store)  │
+        │   Port: 5433     │  │   Port: 6381    │
+        └──────────────────┘  └──────────────────┘
+```
+
+### Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | Next.js 14 (App Router) | React framework with SSR/SSG |
+| **Authentication** | Better Auth | Core authentication framework |
+| **API** | tRPC | Type-safe API layer |
+| **Database** | PostgreSQL 15 | Primary data store with RLS |
+| **ORM** | Prisma | Type-safe database client |
+| **Cache** | Redis | Session storage and caching |
+| **Container** | Docker | Containerization |
+| **Proxy** | NGINX | Reverse proxy and SSL |
+
+### Security Architecture
+
+#### Multi-Tenant Isolation
+
+```typescript
+// Row-Level Security (RLS) Implementation
+┌─────────────────────────────────────────┐
+│          Request with Tenant ID         │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│         tRPC Middleware Stack           │
+│  1. Rate Limiting                        │
+│  2. Authentication Check                 │
+│  3. Tenant Context Injection             │
+│  4. Audit Logging                        │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│     PostgreSQL with RLS Policies        │
+│  set_auth_context(tenant_id, user_id)   │
+└─────────────────────────────────────────┘
+```
+
+#### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant AuthService
+    participant Database
+    participant EmailService
+
+    User->>Client: Enter credentials
+    Client->>AuthService: POST /api/auth/signin
+    AuthService->>Database: Verify credentials
+    Database-->>AuthService: User data
+
+    alt 2FA Enabled
+        AuthService->>EmailService: Send 2FA code
+        EmailService-->>User: 2FA code email
+        User->>Client: Enter 2FA code
+        Client->>AuthService: POST /api/auth/verify-2fa
+        AuthService->>Database: Verify 2FA code
+    end
+
+    AuthService->>Database: Create session
+    AuthService-->>Client: Session token + user data
+    Client-->>User: Redirect to dashboard
+```
+
+## Quick Start Guide
+
+### Prerequisites
+
+- Node.js 18.0.0 or higher
+- npm 8.0.0 or higher
+- PostgreSQL 14 or higher
+- Docker and Docker Compose (optional)
+- Git
+
+### Local Development Setup
+
+#### 1. Clone and Install
+
+```bash
+# Clone repository
+git clone https://github.com/mlpipes/auth-service.git
+cd mlpipes-auth
+
+# Install dependencies
+npm install
+```
+
+#### 2. Database Setup
+
+```bash
+# Option A: Using Docker
+docker-compose up -d auth-db
+
+# Option B: Manual PostgreSQL setup
+createdb mlpipes_auth
+psql mlpipes_auth < scripts/init-db.sql
+```
+
+#### 3. Environment Configuration
+
+Create `.env.local` file:
+
+```bash
+# Database
+DATABASE_URL="postgresql://auth_service:auth_password@localhost:5433/mlpipes_auth"
+
+# Better Auth
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
+BETTER_AUTH_URL="http://localhost:3001"
+
+# Email (Required)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-specific-password"
+SMTP_FROM="MLPipes Auth <noreply@mlpipes.ai>"
+
+# SMS (Optional - Twilio)
+TWILIO_ACCOUNT_SID=""
+TWILIO_AUTH_TOKEN=""
+TWILIO_PHONE_NUMBER=""
+
+# Redis (Optional)
+REDIS_URL="redis://localhost:6381"
+
+# Session Configuration
+SESSION_MAX_AGE="1800"  # 30 minutes
+SESSION_UPDATE_AGE="300" # 5 minutes
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS="60000"  # 1 minute
+RATE_LIMIT_MAX_REQUESTS="100" # requests per window
+
+# Passkey Configuration
+PASSKEY_RP_ID="localhost"
+PASSKEY_RP_NAME="MLPipes Auth"
+
+# Application
+NODE_ENV="development"
+APP_URL="http://localhost:3001"
+```
+
+#### 4. Database Migrations
+
+```bash
+# Run migrations
+npm run db:migrate
+
+# Generate Prisma client
+npm run db:generate
+
+# Setup row-level security
+npm run db:rls
+
+# Seed initial data
+npm run db:seed
+```
+
+#### 5. Start Development Server
+
+```bash
+npm run dev
+```
+
+Access the service at `http://localhost:3001`
+
+### Docker Development
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f auth-service
+
+# Stop services
+docker-compose down
+```
+
+## API Reference
+
+### Authentication API (tRPC)
+
+#### Base URL
+```
+http://localhost:3001/api/trpc
+```
+
+#### Authentication Procedures
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `auth.signUp` | Mutation | Register new user | `{ email, password, firstName?, lastName?, organizationId?, licenseNumber?, npiNumber?, specialties? }` |
+| `auth.signIn` | Mutation | User login | `{ email, password }` |
+| `auth.signOut` | Mutation | Logout user | `{ sessionToken }` |
+| `auth.verifyEmail` | Mutation | Verify email address | `{ token }` |
+| `auth.resendVerification` | Mutation | Resend verification email | `{ email }` |
+| `auth.resetPassword` | Mutation | Request password reset | `{ email }` |
+| `auth.changePassword` | Mutation | Change password | `{ currentPassword, newPassword }` |
+| `auth.session.get` | Query | Get current session | - |
+| `auth.session.refresh` | Mutation | Refresh session | `{ refreshToken }` |
+| `auth.session.revoke` | Mutation | Revoke session | `{ sessionToken }` |
+| `auth.sessions.list` | Query | List all sessions | - |
+
+#### Two-Factor Authentication
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `auth.twoFactor.setup` | Mutation | Setup 2FA | `{ type: 'totp' \| 'sms' }` |
+| `auth.twoFactor.verify` | Mutation | Verify 2FA code | `{ code, type }` |
+| `auth.twoFactor.disable` | Mutation | Disable 2FA | `{ password }` |
+| `auth.twoFactor.backupCodes` | Query | Get backup codes | - |
+| `auth.twoFactor.regenerateBackupCodes` | Mutation | New backup codes | - |
+
+#### Passkey/WebAuthn
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `auth.passkey.register` | Mutation | Register passkey | `{ deviceName, challenge }` |
+| `auth.passkey.authenticate` | Mutation | Authenticate with passkey | `{ credentialId, assertion }` |
+| `auth.passkey.list` | Query | List passkeys | - |
+| `auth.passkey.delete` | Mutation | Remove passkey | `{ passkeyId }` |
+
+#### Magic Links
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `auth.magicLink.request` | Mutation | Request magic link | `{ email, organizationId? }` |
+| `auth.magicLink.verify` | Mutation | Verify magic link | `{ token }` |
+
+### Organization Management API
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `organization.create` | Mutation | Create organization | `{ name, slug, organizationType, practiceNpi?, complianceSettings? }` |
+| `organization.update` | Mutation | Update organization | `{ id, ...updates }` |
+| `organization.get` | Query | Get organization | `{ id \| slug }` |
+| `organization.list` | Query | List organizations | `{ limit?, offset? }` |
+| `organization.delete` | Mutation | Delete organization | `{ id }` |
+| `organization.inviteMember` | Mutation | Invite member | `{ email, role, permissions? }` |
+| `organization.removeMember` | Mutation | Remove member | `{ memberId }` |
+| `organization.updateMember` | Mutation | Update member | `{ memberId, role?, permissions? }` |
+| `organization.members` | Query | List members | `{ organizationId }` |
+
+### Admin API
+
+| Procedure | Type | Description | Input Schema |
+|-----------|------|-------------|--------------|
+| `admin.users.list` | Query | List all users | `{ organizationId?, role?, limit?, offset? }` |
+| `admin.users.get` | Query | Get user details | `{ userId }` |
+| `admin.users.update` | Mutation | Update user | `{ userId, ...updates }` |
+| `admin.users.delete` | Mutation | Delete user | `{ userId }` |
+| `admin.users.suspend` | Mutation | Suspend user | `{ userId, reason }` |
+| `admin.users.unlock` | Mutation | Unlock user | `{ userId }` |
+| `admin.auditLogs` | Query | Get audit logs | `{ filters, dateRange }` |
+| `admin.metrics` | Query | Get metrics | `{ organizationId?, period }` |
+| `admin.settings.get` | Query | Get settings | - |
+| `admin.settings.update` | Mutation | Update settings | `{ ...settings }` |
+
+### OAuth2 API
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| `/api/oauth/authorize` | GET | Authorization endpoint | `client_id, redirect_uri, response_type, scope, state` |
+| `/api/oauth/token` | POST | Token endpoint | `grant_type, code, client_id, client_secret` |
+| `/api/oauth/introspect` | POST | Token introspection | `token, token_type_hint` |
+| `/api/oauth/revoke` | POST | Revoke token | `token, token_type_hint` |
+| `/api/oauth/userinfo` | GET | User information | Bearer token in header |
+| `/api/oauth/.well-known/openid-configuration` | GET | OpenID configuration | - |
+
+### SMART on FHIR API
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| `/api/fhir/metadata` | GET | Capability statement | - |
+| `/api/fhir/authorize` | GET | SMART authorization | `response_type, client_id, scope, redirect_uri, aud, launch` |
+| `/api/fhir/token` | POST | SMART token | `grant_type, code, client_id, redirect_uri` |
+| `/api/fhir/.well-known/smart-configuration` | GET | SMART configuration | - |
+
+## API Usage Examples
+
+### TypeScript/Node.js Client
+
+#### Setup tRPC Client
+
+```typescript
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import superjson from 'superjson';
+import type { AppRouter } from '@mlpipes/auth-service';
+
+const client = createTRPCProxyClient<AppRouter>({
+  transformer: superjson,
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3001/api/trpc',
+      headers() {
+        return {
+          authorization: `Bearer ${getAuthToken()}`,
+          'x-tenant-id': getTenantId(),
+        };
+      },
+    }),
+  ],
+});
+```
+
+#### Complete Authentication Flow
+
+```typescript
+// 1. Register new user
+async function registerUser() {
+  try {
+    const user = await client.auth.signUp.mutate({
+      email: 'doctor@hospital.com',
+      password: 'SecurePassword123!',
+      firstName: 'John',
+      lastName: 'Doe',
+      organizationId: 'org_hospital_123',
+      licenseNumber: 'MD12345',
+      npiNumber: '1234567890',
+      specialties: ['Cardiology', 'Internal Medicine']
+    });
+
+    console.log('User registered:', user.id);
+    return user;
+  } catch (error) {
+    console.error('Registration failed:', error);
+  }
+}
+
+// 2. Setup Two-Factor Authentication
+async function setupTwoFactor(userId: string) {
+  // Generate TOTP secret
+  const { secret, qrCode, backupCodes } = await client.auth.twoFactor.setup.mutate({
+    type: 'totp'
+  });
+
+  // Display QR code to user
+  console.log('Scan this QR code:', qrCode);
+  console.log('Backup codes:', backupCodes);
+
+  // User scans QR code and enters verification code
+  const verificationCode = await getUserInput('Enter verification code:');
+
+  // Verify and enable 2FA
+  const result = await client.auth.twoFactor.verify.mutate({
+    code: verificationCode,
+    type: 'totp'
+  });
+
+  return result;
+}
+
+// 3. Login with 2FA
+async function loginWith2FA() {
+  // Initial login
+  const loginResult = await client.auth.signIn.mutate({
+    email: 'doctor@hospital.com',
+    password: 'SecurePassword123!'
+  });
+
+  if (loginResult.requiresTwoFactor) {
+    // Get 2FA code from user
+    const code = await getUserInput('Enter 2FA code:');
+
+    // Verify 2FA
+    const session = await client.auth.twoFactor.verify.mutate({
+      userId: loginResult.userId,
+      code,
+      type: 'totp'
+    });
+
+    // Store session token
+    saveAuthToken(session.token);
+    return session;
+  }
+
+  return loginResult;
+}
+
+// 4. Register Passkey
+async function registerPasskey() {
+  // Get WebAuthn credential creation options
+  const options = await client.auth.passkey.getRegistrationOptions.query();
+
+  // Create credential using WebAuthn API
+  const credential = await navigator.credentials.create({
+    publicKey: options
+  });
+
+  // Register passkey with server
+  const passkey = await client.auth.passkey.register.mutate({
+    deviceName: 'MacBook Pro Touch ID',
+    credential: credential.response
+  });
+
+  return passkey;
+}
+```
+
+### React Integration
+
+```typescript
+// auth-provider.tsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createTRPCProxyClient } from '@trpc/client';
+
+interface AuthContextType {
+  user: User | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  signUp: (data: SignUpData) => Promise<void>;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const trpc = createTRPCProxyClient<AppRouter>({
+    // ... configuration
+  });
+
+  useEffect(() => {
+    // Check for existing session
+    trpc.auth.session.get.query()
+      .then(session => setUser(session?.user || null))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    const result = await trpc.auth.signIn.mutate({ email, password });
+
+    if (result.requiresTwoFactor) {
+      // Handle 2FA flow
+      const code = await promptFor2FACode();
+      const session = await trpc.auth.twoFactor.verify.mutate({
+        userId: result.userId,
+        code,
+        type: 'totp'
+      });
+      setUser(session.user);
+    } else {
+      setUser(result.user);
+    }
+  };
+
+  const signOut = async () => {
+    await trpc.auth.signOut.mutate();
+    setUser(null);
+  };
+
+  const signUp = async (data: SignUpData) => {
+    const user = await trpc.auth.signUp.mutate(data);
+    // Prompt user to verify email
+    console.log('Please check your email to verify your account');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, signIn, signOut, signUp, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+```
+
+### cURL Examples
+
+```bash
+# Register new user
+curl -X POST http://localhost:3001/api/trpc/auth.signUp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePassword123!",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "organizationId": "org_123"
+  }'
+
+# Login
+curl -X POST http://localhost:3001/api/trpc/auth.signIn \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePassword123!"
+  }'
+
+# OAuth2 Authorization
+curl -X GET "http://localhost:3001/api/oauth/authorize?\
+client_id=your_client_id&\
+redirect_uri=https://app.example.com/callback&\
+response_type=code&\
+scope=openid profile email&\
+state=random_state_string"
+
+# Exchange OAuth2 code for token
+curl -X POST http://localhost:3001/api/oauth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "Authorization: Basic $(echo -n 'client_id:client_secret' | base64)" \
+  -d "grant_type=authorization_code" \
+  -d "code=auth_code_from_callback" \
+  -d "redirect_uri=https://app.example.com/callback"
+```
+
+## Deployment Guide
+
+### Production Environment Setup
+
+#### System Requirements
+
+- **Server**: 4 vCPUs, 8GB RAM minimum
+- **Database**: PostgreSQL 14+, 2 vCPUs, 4GB RAM
+- **Redis**: 1 vCPU, 2GB RAM
+- **Storage**: 50GB SSD minimum
+- **Network**: HTTPS with valid SSL certificate
+
+#### Environment Variables (Production)
+
+```bash
+# Production environment
+NODE_ENV="production"
+APP_URL="https://auth.yourdomain.com"
+
+# Database (use connection pooling)
+DATABASE_URL="postgresql://auth_service:SECURE_PASSWORD@db.yourdomain.com:5432/mlpipes_auth?sslmode=require&pool_timeout=20"
+
+# Better Auth
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" # Generate secure 32+ char secret
+BETTER_AUTH_URL="https://auth.yourdomain.com"
+
+# Session Configuration
+SESSION_MAX_AGE="1800"    # 30 minutes (adjust based on security requirements)
+SESSION_UPDATE_AGE="300"  # 5 minutes
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS="60000"
+RATE_LIMIT_MAX_REQUESTS="50" # Stricter in production
+
+# Email Service (AWS SES recommended)
+SMTP_HOST="email-smtp.us-east-1.amazonaws.com"
+SMTP_PORT="465"
+SMTP_USER="AKIAIOSFODNN7EXAMPLE"
+SMTP_PASS="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+SMTP_FROM="MLPipes Auth <auth@yourdomain.com>"
+
+# SMS (Twilio)
+TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxx"
+TWILIO_AUTH_TOKEN="xxxxxxxxxxxxxxxxx"
+TWILIO_PHONE_NUMBER="+15551234567"
+
+# Redis (use Redis Cluster for HA)
+REDIS_URL="redis://username:password@redis.yourdomain.com:6379/0"
+
+# Monitoring
+SENTRY_DSN="https://xxxx@sentry.io/xxxx"
+LOG_LEVEL="info"
+```
+
+### Docker Deployment
+
+#### Build Production Image
+
+```dockerfile
+# Dockerfile
+FROM node:18-alpine AS dependencies
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/prisma ./prisma
+
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+#### Docker Compose Production
+
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+
+services:
+  auth-service:
+    image: mlpipes/auth-service:latest
+    container_name: mlpipes-auth-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: mlpipes-auth-db-prod
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=mlpipes_auth
+      - POSTGRES_USER=auth_service
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    command: >
+      postgres
+      -c max_connections=100
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+
+  redis:
+    image: redis:7-alpine
+    container_name: mlpipes-auth-redis-prod
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+  nginx:
+    image: nginx:alpine
+    container_name: mlpipes-auth-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - auth-service
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+### Kubernetes Deployment
+
+#### Deployment Manifest
+
+```yaml
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlpipes-auth-service
+  namespace: auth
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mlpipes-auth
+  template:
+    metadata:
+      labels:
+        app: mlpipes-auth
+    spec:
+      containers:
+      - name: auth-service
+        image: mlpipes/auth-service:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: database-url
+        - name: BETTER_AUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: auth-secret
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: redis-url
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlpipes-auth-service
+  namespace: auth
+spec:
+  selector:
+    app: mlpipes-auth
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer
+```
+
+### AWS Deployment
+
+#### ECS Task Definition
+
+```json
+{
+  "family": "mlpipes-auth-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "auth-service",
+      "image": "mlpipes/auth-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "BETTER_AUTH_URL",
+          "value": "https://auth.yourdomain.com"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:region:account:secret:auth/database-url"
+        },
+        {
+          "name": "BETTER_AUTH_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:region:account:secret:auth/secret"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mlpipes-auth",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "auth"
+        }
+      }
+    }
+  ]
+}
+```
+
+#### Infrastructure as Code (Terraform)
+
+```hcl
+# terraform/main.tf
+provider "aws" {
+  region = "us-east-1"
+}
+
+# RDS PostgreSQL
+resource "aws_db_instance" "auth_db" {
+  identifier     = "mlpipes-auth-db"
+  engine         = "postgres"
+  engine_version = "15.3"
+  instance_class = "db.t3.medium"
+
+  allocated_storage     = 100
+  storage_encrypted     = true
+  storage_type          = "gp3"
+
+  db_name  = "mlpipes_auth"
+  username = "auth_service"
+  password = var.db_password
+
+  vpc_security_group_ids = [aws_security_group.auth_db.id]
+  db_subnet_group_name   = aws_db_subnet_group.auth.name
+
+  backup_retention_period = 30
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+
+  enabled_cloudwatch_logs_exports = ["postgresql"]
+
+  tags = {
+    Name        = "MLPipes Auth Database"
+    Environment = "production"
+  }
+}
+
+# ElastiCache Redis
+resource "aws_elasticache_cluster" "auth_redis" {
+  cluster_id           = "mlpipes-auth-redis"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis7"
+  port                 = 6379
+
+  snapshot_retention_limit = 7
+  snapshot_window         = "03:00-04:00"
+
+  tags = {
+    Name        = "MLPipes Auth Redis"
+    Environment = "production"
+  }
+}
+
+# ALB
+resource "aws_lb" "auth_alb" {
+  name               = "mlpipes-auth-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.auth_alb.id]
+  subnets           = aws_subnet.public[*].id
+
+  enable_deletion_protection = true
+  enable_http2              = true
+
+  tags = {
+    Name        = "MLPipes Auth ALB"
+    Environment = "production"
+  }
+}
+
+# ECS Cluster
+resource "aws_ecs_cluster" "auth_cluster" {
+  name = "mlpipes-auth-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+
+  tags = {
+    Name        = "MLPipes Auth Cluster"
+    Environment = "production"
+  }
+}
+
+# ECS Service
+resource "aws_ecs_service" "auth_service" {
+  name            = "mlpipes-auth-service"
+  cluster         = aws_ecs_cluster.auth_cluster.id
+  task_definition = aws_ecs_task_definition.auth_task.arn
+  desired_count   = 3
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.auth_ecs.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.auth_tg.arn
+    container_name   = "auth-service"
+    container_port   = 3000
+  }
+
+  health_check_grace_period_seconds = 60
+
+  deployment_configuration {
+    maximum_percent         = 200
+    minimum_healthy_percent = 100
+  }
+}
+```
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy MLPipes Auth Service
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: mlpipes-auth-service
+  ECS_SERVICE: mlpipes-auth-service
+  ECS_CLUSTER: mlpipes-auth-cluster
+  CONTAINER_NAME: auth-service
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Setup test database
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+        run: |
+          npm run db:migrate
+          npm run db:generate
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+          BETTER_AUTH_SECRET: test-secret-key-for-testing-only
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+
+  build-and-deploy:
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition mlpipes-auth-task \
+            --query taskDefinition > task-definition.json
+
+      - name: Update task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Run database migrations
+        run: |
+          aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition mlpipes-auth-migrate \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.SUBNET_IDS }}],securityGroups=[${{ secrets.SECURITY_GROUP_ID }}]}"
+
+      - name: Health check
+        run: |
+          sleep 60
+          curl -f https://auth.yourdomain.com/api/health || exit 1
+
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'MLPipes Auth Service deployed successfully to production'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: success()
+
+  rollback:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Rollback ECS service
+        run: |
+          PREVIOUS_TASK_DEF=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query "services[0].deployments[1].taskDefinition" \
+            --output text)
+
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition $PREVIOUS_TASK_DEF
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'failure'
+          text: 'MLPipes Auth Service deployment failed. Rolling back to previous version.'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+### GitLab CI/CD Pipeline
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - test
+  - build
+  - deploy
+  - rollback
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: mlpipes-auth-service
+
+# Test Stage
+test:unit:
+  stage: test
+  image: node:18-alpine
+  services:
+    - postgres:15-alpine
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_pass
+    DATABASE_URL: postgresql://test_user:test_pass@postgres:5432/test_db
+  before_script:
+    - npm ci
+  script:
+    - npm run lint
+    - npm run type-check
+    - npm run db:migrate
+    - npm run test:coverage
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+
+test:security:
+  stage: test
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs --severity HIGH,CRITICAL --no-progress .
+  allow_failure: true
+
+# Build Stage
+build:image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - apk add --no-cache curl jq python3 py3-pip
+    - pip install awscli
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+  script:
+    - docker build -t $ECR_REPOSITORY:$CI_COMMIT_SHA .
+    - docker tag $ECR_REPOSITORY:$CI_COMMIT_SHA $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA
+    - docker tag $ECR_REPOSITORY:$CI_COMMIT_SHA $ECR_REGISTRY/$ECR_REPOSITORY:latest
+    - docker push $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA
+    - docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  only:
+    - main
+
+# Deploy Stage
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq python3 py3-pip
+    - pip install awscli
+  script:
+    - |
+      aws ecs update-service \
+        --cluster mlpipes-auth-cluster \
+        --service mlpipes-auth-service \
+        --force-new-deployment
+    - |
+      aws ecs wait services-stable \
+        --cluster mlpipes-auth-cluster \
+        --services mlpipes-auth-service
+  environment:
+    name: production
+    url: https://auth.yourdomain.com
+  only:
+    - main
+  when: manual
+
+# Rollback Stage
+rollback:production:
+  stage: rollback
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq python3 py3-pip
+    - pip install awscli
+  script:
+    - |
+      PREVIOUS_TASK_DEF=$(aws ecs describe-services \
+        --cluster mlpipes-auth-cluster \
+        --services mlpipes-auth-service \
+        --query "services[0].deployments[1].taskDefinition" \
+        --output text)
+
+      aws ecs update-service \
+        --cluster mlpipes-auth-cluster \
+        --service mlpipes-auth-service \
+        --task-definition $PREVIOUS_TASK_DEF
+  when: manual
+  only:
+    - main
+```
+
+## Testing Strategy
+
+### Unit Testing
+
+```typescript
+// src/lib/__tests__/auth.test.ts
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { auth } from '../auth';
+import { PrismaClient } from '@prisma/client';
+
+vi.mock('@prisma/client');
+
+describe('Authentication Service', () => {
+  let prisma: PrismaClient;
+
+  beforeEach(() => {
+    prisma = new PrismaClient();
+  });
+
+  describe('signUp', () => {
+    it('should create a new user with encrypted password', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'SecurePassword123!',
+        firstName: 'Test',
+        lastName: 'User'
+      };
+
+      const result = await auth.signUp(userData);
+
+      expect(result).toHaveProperty('id');
+      expect(result.email).toBe(userData.email);
+      expect(result.password).not.toBe(userData.password);
+    });
+
+    it('should reject weak passwords', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'weak'
+      };
+
+      await expect(auth.signUp(userData)).rejects.toThrow('Password too weak');
+    });
+  });
+
+  describe('signIn', () => {
+    it('should authenticate valid credentials', async () => {
+      const credentials = {
+        email: 'test@example.com',
+        password: 'SecurePassword123!'
+      };
+
+      const session = await auth.signIn(credentials);
+
+      expect(session).toHaveProperty('token');
+      expect(session).toHaveProperty('user');
+    });
+
+    it('should handle 2FA if enabled', async () => {
+      const credentials = {
+        email: '2fa@example.com',
+        password: 'SecurePassword123!'
+      };
+
+      const result = await auth.signIn(credentials);
+
+      expect(result.requiresTwoFactor).toBe(true);
+      expect(result.userId).toBeDefined();
+    });
+  });
+});
+```
+
+### Integration Testing
+
+```typescript
+// src/test/integration.test.ts
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTRPCMsw } from 'msw-trpc';
+import { setupServer } from 'msw/node';
+import { appRouter } from '../server/routers';
+import type { AppRouter } from '../server/routers';
+
+const server = setupServer();
+
+beforeAll(() => server.listen());
+afterAll(() => server.close());
+
+describe('API Integration Tests', () => {
+  describe('Complete Authentication Flow', () => {
+    it('should handle full signup to login flow', async () => {
+      // 1. Register user
+      const user = await client.auth.signUp.mutate({
+        email: 'integration@test.com',
+        password: 'IntegrationTest123!',
+        organizationId: 'test_org'
+      });
+
+      expect(user.emailVerified).toBe(false);
+
+      // 2. Verify email
+      const verificationToken = 'test_verification_token';
+      await client.auth.verifyEmail.mutate({ token: verificationToken });
+
+      // 3. Login
+      const session = await client.auth.signIn.mutate({
+        email: 'integration@test.com',
+        password: 'IntegrationTest123!'
+      });
+
+      expect(session.user.emailVerified).toBe(true);
+
+      // 4. Setup 2FA
+      const { secret, qrCode } = await client.auth.twoFactor.setup.mutate({
+        type: 'totp'
+      });
+
+      expect(secret).toBeDefined();
+      expect(qrCode).toBeDefined();
+    });
+  });
+
+  describe('Multi-tenant Operations', () => {
+    it('should isolate data between tenants', async () => {
+      // Create two organizations
+      const org1 = await client.organization.create.mutate({
+        name: 'Hospital A',
+        slug: 'hospital-a'
+      });
+
+      const org2 = await client.organization.create.mutate({
+        name: 'Hospital B',
+        slug: 'hospital-b'
+      });
+
+      // Create users in different orgs
+      const user1 = await createUserInOrg(org1.id);
+      const user2 = await createUserInOrg(org2.id);
+
+      // Verify isolation
+      const org1Users = await client.admin.users.list.query({
+        organizationId: org1.id
+      });
+
+      expect(org1Users).not.toContainEqual(
+        expect.objectContaining({ id: user2.id })
+      );
+    });
+  });
+});
+```
+
+### E2E Testing
+
+```typescript
+// e2e/auth.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Authentication E2E', () => {
+  test('complete signup flow', async ({ page }) => {
+    await page.goto('http://localhost:3001/signup');
+
+    // Fill signup form
+    await page.fill('[name="email"]', 'e2e@test.com');
+    await page.fill('[name="password"]', 'E2ETestPassword123!');
+    await page.fill('[name="confirmPassword"]', 'E2ETestPassword123!');
+    await page.fill('[name="firstName"]', 'E2E');
+    await page.fill('[name="lastName"]', 'Test');
+
+    // Submit form
+    await page.click('[type="submit"]');
+
+    // Check for success message
+    await expect(page.locator('.success-message')).toContainText(
+      'Please check your email to verify your account'
+    );
+  });
+
+  test('login with 2FA', async ({ page }) => {
+    await page.goto('http://localhost:3001/login');
+
+    // Login
+    await page.fill('[name="email"]', '2fa@test.com');
+    await page.fill('[name="password"]', 'TestPassword123!');
+    await page.click('[type="submit"]');
+
+    // Enter 2FA code
+    await page.fill('[name="code"]', '123456');
+    await page.click('[type="submit"]');
+
+    // Verify redirect to dashboard
+    await expect(page).toHaveURL('http://localhost:3001/dashboard');
+  });
+});
+```
+
+## Security Best Practices
+
+### Environment Security
+
+1. **Never commit secrets to version control**
+   - Use `.env.local` for local development
+   - Use secrets management services in production (AWS Secrets Manager, HashiCorp Vault)
+
+2. **Rotate secrets regularly**
+   - Auth secrets every 90 days
+   - Database passwords every 60 days
+   - API keys every 30 days
+
+3. **Use least privilege principle**
+   - Database user with minimal required permissions
+   - IAM roles with specific policies
+   - Network security groups with restricted access
+
+### Application Security
+
+1. **Input Validation**
+   ```typescript
+   // Always validate and sanitize input
+   const emailSchema = z.string().email().toLowerCase().trim();
+   const passwordSchema = z.string()
+     .min(12)
+     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/);
+   ```
+
+2. **Rate Limiting**
+   ```typescript
+   // Implement progressive rate limiting
+   const rateLimits = {
+     signin: { window: 60000, max: 5 },      // 5 attempts per minute
+     signup: { window: 3600000, max: 10 },   // 10 per hour
+     passwordReset: { window: 3600000, max: 3 } // 3 per hour
+   };
+   ```
+
+3. **Session Security**
+   ```typescript
+   // Secure session configuration
+   const sessionConfig = {
+     httpOnly: true,
+     secure: true, // HTTPS only
+     sameSite: 'strict',
+     maxAge: 1800000, // 30 minutes
+     rolling: true // Extend on activity
+   };
+   ```
+
+### Database Security
+
+1. **Row-Level Security (RLS)**
+   ```sql
+   -- Enable RLS on all tables
+   ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+   -- Create policy for tenant isolation
+   CREATE POLICY tenant_isolation ON users
+     FOR ALL
+     USING (organization_id = current_setting('app.current_tenant')::uuid);
+   ```
+
+2. **Encryption at Rest**
+   ```sql
+   -- Enable encryption for sensitive columns
+   CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+   ALTER TABLE users
+     ALTER COLUMN ssn TYPE text
+     USING pgp_sym_encrypt(ssn, current_setting('app.encryption_key'));
+   ```
+
+3. **Audit Logging**
+   ```sql
+   -- Create audit trigger
+   CREATE OR REPLACE FUNCTION audit_trigger_function()
+   RETURNS trigger AS $$
+   BEGIN
+     INSERT INTO audit_logs(
+       user_id, action, resource, resource_id, details, timestamp
+     ) VALUES (
+       current_setting('app.current_user')::uuid,
+       TG_OP,
+       TG_TABLE_NAME,
+       NEW.id,
+       row_to_json(NEW),
+       now()
+     );
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Database Connection Errors
+
+**Problem**: `ECONNREFUSED` when connecting to database
+
+**Solution**:
+```bash
+# Check if PostgreSQL is running
+docker ps | grep postgres
+
+# Restart database
+docker-compose restart auth-db
+
+# Check connection string
+echo $DATABASE_URL
+```
+
+#### 2. Session Timeout Issues
+
+**Problem**: Users getting logged out too frequently
+
+**Solution**:
+```typescript
+// Adjust session configuration
+SESSION_MAX_AGE=3600  # Increase to 1 hour
+SESSION_UPDATE_AGE=600 # Update every 10 minutes
+```
+
+#### 3. 2FA Not Working
+
+**Problem**: TOTP codes not being accepted
+
+**Solution**:
+```bash
+# Check server time synchronization
+timedatectl status
+
+# Sync time if needed
+sudo ntpdate -s time.nist.gov
+```
+
+#### 4. Email Delivery Failures
+
+**Problem**: Verification emails not being sent
+
+**Solution**:
+```bash
+# Test SMTP connection
+npm run test:email
+
+# Check SMTP credentials
+openssl s_client -connect smtp.gmail.com:587 -starttls smtp
+
+# Verify sender domain
+nslookup -type=txt _dmarc.yourdomain.com
+```
+
+#### 5. Rate Limiting Too Strict
+
+**Problem**: Legitimate users being rate limited
+
+**Solution**:
+```typescript
+// Adjust rate limits in environment
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100  # Increase limit
+
+// Or implement progressive delays
+const progressiveDelay = Math.min(1000 * Math.pow(2, attemptCount), 30000);
+```
+
+### Debug Mode
+
+Enable debug logging:
+
+```bash
+# Environment variables
+LOG_LEVEL=debug
+DEBUG=auth:*,trpc:*,prisma:*
+
+# Start with debug
+npm run dev:debug
+```
+
+### Health Checks
+
+```typescript
+// API health check endpoint
+app.get('/api/health', async (req, res) => {
+  const checks = {
+    service: 'healthy',
+    database: 'unknown',
+    redis: 'unknown',
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = 'healthy';
+  } catch (error) {
+    checks.database = 'unhealthy';
+  }
+
+  try {
+    await redis.ping();
+    checks.redis = 'healthy';
+  } catch (error) {
+    checks.redis = 'unhealthy';
+  }
+
+  const isHealthy = Object.values(checks).every(v => v !== 'unhealthy');
+  res.status(isHealthy ? 200 : 503).json(checks);
+});
+```
+
+### Monitoring and Alerts
+
+Set up monitoring with Datadog, New Relic, or CloudWatch:
+
+```typescript
+// Datadog APM integration
+import tracer from 'dd-trace';
+tracer.init({
+  env: process.env.NODE_ENV,
+  service: 'mlpipes-auth',
+  version: process.env.APP_VERSION
+});
+
+// Custom metrics
+import { StatsD } from 'node-statsd';
+const metrics = new StatsD();
+
+// Track authentication events
+metrics.increment('auth.login.success');
+metrics.increment('auth.login.failed');
+metrics.timing('auth.session.duration', sessionDuration);
+```
+
+## Support
+
+For additional help and support:
+
+- **Documentation**: [https://docs.mlpipes.ai/auth-service](https://docs.mlpipes.ai/auth-service)
+- **GitHub Issues**: [https://github.com/mlpipes/auth-service/issues](https://github.com/mlpipes/auth-service/issues)
+- **Email Support**: [support@mlpipes.ai](mailto:support@mlpipes.ai)
+- **Community Discord**: [https://discord.gg/mlpipes](https://discord.gg/mlpipes)
+
+---
+
+**MLPipes Auth Service** - Enterprise Authentication for Healthcare
+
+Author: Alfeo A. Sabay, MLPipes LLC
+
+Last Updated: 2024

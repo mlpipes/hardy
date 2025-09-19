@@ -1,5 +1,5 @@
 /**
- * MLPipes Auth Service - FHIR/SMART on FHIR tRPC Router
+ * Hardy Auth Service - FHIR/SMART on FHIR tRPC Router
  * Healthcare-specific authentication and authorization
  */
 
@@ -20,18 +20,18 @@ export const fhirRouter = createTRPCRouter({
       
       return {
         resourceType: 'CapabilityStatement',
-        id: 'mlpipes-auth-capability',
+        id: 'hardy-auth-capability',
         url: `${baseUrl}/api/fhir/metadata`,
         version: '1.0.0',
-        name: 'MLPipes Auth Service',
-        title: 'MLPipes Authentication Service FHIR Capability Statement',
+        name: 'Hardy Auth Service',
+        title: 'Hardy Authentication Service FHIR Capability Statement',
         status: 'active',
         experimental: false,
         date: new Date().toISOString(),
-        publisher: 'MLPipes',
+        publisher: 'Hardy',
         contact: [
           {
-            name: 'MLPipes Support',
+            name: 'Hardy Support',
             telecom: [
               {
                 system: 'email',
@@ -40,7 +40,7 @@ export const fhirRouter = createTRPCRouter({
             ],
           },
         ],
-        description: 'MLPipes Auth Service supports SMART on FHIR authentication and authorization.',
+        description: 'Hardy Auth Service supports SMART on FHIR authentication and authorization.',
         fhirVersion: '4.0.1',
         format: ['json'],
         rest: [

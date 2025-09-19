@@ -1,5 +1,5 @@
 /**
- * MLPipes Auth Service - Core Authentication Configuration
+ * Hardy Auth Service - Core Authentication Configuration
  * Enterprise-grade authentication with FHIR/SMART support
  */
 
@@ -66,7 +66,7 @@ export const auth = betterAuth({
 
   // Advanced security settings
   advanced: {
-    cookiePrefix: "mlpipes_auth",
+    cookiePrefix: "hardy_auth",
     crossSubDomainCookies: {
       enabled: false, // Disabled for security
     },
@@ -92,7 +92,7 @@ export const auth = betterAuth({
   plugins: [
     // Two-Factor Authentication (TOTP, SMS, Email)
     twoFactor({
-      issuer: "MLPipes Auth",
+      issuer: "Hardy Auth",
       otpOptions: {
         expiresIn: 60 * 5, // 5 minutes
         period: 30, // 30 seconds for TOTP
@@ -102,7 +102,7 @@ export const auth = betterAuth({
         async sendSMS({ phoneNumber, otp }) {
           await sendSMS({
             to: phoneNumber,
-            message: `Your MLPipes Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
+            message: `Your Hardy Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
           })
         },
       },
@@ -110,11 +110,11 @@ export const auth = betterAuth({
         async sendEmail({ email, otp }) {
           await sendEmail({
             to: email,
-            subject: "MLPipes Auth - Your Verification Code",
+            subject: "Hardy Auth - Your Verification Code",
             html: `
               <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">MLPipes Auth</h1>
+                  <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Hardy Auth</h1>
                 </div>
                 <div style="padding: 40px 30px; background: white; text-align: center;">
                   <h2 style="color: #1f2937; margin: 0 0 20px 0;">Verification Code</h2>
@@ -135,7 +135,7 @@ export const auth = betterAuth({
     // Passkey Authentication (WebAuthn)
     passkey({
       rp: {
-        name: "MLPipes Auth",
+        name: "Hardy Auth",
         id: process.env.PASSKEY_RP_ID || "localhost",
       },
       authenticatorSelection: {
@@ -151,7 +151,7 @@ export const auth = betterAuth({
       sendSMS: async ({ phoneNumber, otp }) => {
         await sendSMS({
           to: phoneNumber,
-          message: `Your MLPipes Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
+          message: `Your Hardy Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
         })
       },
     }),
@@ -161,7 +161,7 @@ export const auth = betterAuth({
       async sendInvitationEmail({ email, organization, inviteLink, role }) {
         await sendEmail({
           to: email,
-          subject: `MLPipes Auth - Invitation to ${organization.name}`,
+          subject: `Hardy Auth - Invitation to ${organization.name}`,
           html: `
             <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">

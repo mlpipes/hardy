@@ -1,7 +1,7 @@
 {
-  "name": "@mlpipes/auth-service",
+  "name": "@hardy/auth-service",
   "version": "1.0.0",
-  "description": "MLPipes Auth Service - Compliance-first authentication service built on Better Auth with HIPAA, SOC 2 Type II, and HITRUST readiness for healthcare applications",
+  "description": "Hardy Auth Service - Compliance-first authentication service built on Better Auth with HIPAA, SOC 2 Type II, and HITRUST readiness for healthcare applications",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
@@ -20,13 +20,16 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/scripts/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:rls": "tsx src/scripts/setup-rls.ts",
-    "docker:build": "docker build -t mlpipes/auth-service .",
-    "docker:run": "docker run -p 3001:3000 mlpipes/auth-service",
+    "docker:build": "docker build -t hardy/auth-service .",
+    "docker:run": "docker run -p 3001:3000 hardy/auth-service",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "hardy:setup": "chmod +x scripts/setup-hardy-auth-db.sh && scripts/setup-hardy-auth-db.sh",
+    "hardy:migrate": "psql -U auth_service -d hardy_auth -h localhost -p 5434 -f scripts/migrate-to-hardy-auth.sql",
+    "hardy:status": "docker-compose ps && docker exec hardy-auth-db psql -U auth_service -d hardy_auth -c 'SELECT COUNT(*) as tables FROM information_schema.tables WHERE table_schema = '\"'\"'public'\"'\"';'"
   },
   "dependencies": {
     "next": "^14.2.5",
@@ -108,7 +111,7 @@
     "webauthn",
     "magic-link",
     "enterprise",
-    "mlpipes",
+    "hardy",
     "open-source",
     "hipaa",
     "soc2",
@@ -117,11 +120,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/mlpipes/auth-service.git"
+    "url": "https://github.com/mlpipes/hardy.git"
   },
-  "homepage": "https://github.com/mlpipes/auth-service",
+  "homepage": "https://github.com/mlpipes/hardy",
   "bugs": {
-    "url": "https://github.com/mlpipes/auth-service/issues"
+    "url": "https://github.com/mlpipes/hardy/issues"
   },
   "author": "Alfeo A. Sabay, MLPipes LLC <support@mlpipes.ai>",
   "license": "MIT"

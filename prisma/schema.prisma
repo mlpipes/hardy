@@ -1,5 +1,5 @@
-// MLPipes Auth Service - Database Schema
-// Multi-tenant authentication with HIPAA compliance and row-level security
+// Hardy Auth Service - Database Schema
+// Multi-tenant healthcare authentication with HIPAA compliance and row-level security
 
 generator client {
   provider = "prisma-client-js"

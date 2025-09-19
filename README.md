@@ -1,4 +1,4 @@
-# MLPipes Auth Service
+# Hardy Auth Service
 
 **Compliance-first, enterprise-grade authentication service built on Better Auth**
 
@@ -43,13 +43,14 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 - Node.js 18+ and npm 8+
 - PostgreSQL 14+ (dedicated instance recommended)
 - Docker and Docker Compose (optional)
+- Redis (optional, for session storage)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/mlpipes/auth-service.git
-   cd mlpipes-auth
+   git clone https://github.com/mlpipes/hardy.git
+   cd hardy
    ```
 
 2. **Install dependencies**
@@ -59,14 +60,50 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 
 3. **Environment setup**
    ```bash
-   cp .env.example .env.local
-   # Edit .env.local with your configuration
+   # Create environment file
+   cat > .env.local << 'EOF'
+   # Database
+   DATABASE_URL="postgresql://auth_service:auth_password@localhost:5433/hardy_auth"
+
+   # Better Auth (generate a 32+ character secret)
+   BETTER_AUTH_SECRET="your-32-character-secret-key-here"
+   BETTER_AUTH_URL="http://localhost:3001"
+
+   # Email Service (required for magic links and verification)
+   SMTP_HOST="smtp.gmail.com"
+   SMTP_PORT="587"
+   SMTP_USER="your-email@gmail.com"
+   SMTP_PASS="your-app-password"
+   SMTP_FROM="Hardy Auth <noreply@mlpipes.ai>"
+
+   # Optional: SMS (for SMS 2FA)
+   TWILIO_ACCOUNT_SID=""
+   TWILIO_AUTH_TOKEN=""
+   TWILIO_PHONE_NUMBER=""
+
+   # Optional: Redis (for session storage)
+   REDIS_URL=""
+   EOF
    ```
 
-4. **Database setup**
+4. **Database setup (Docker)**
    ```bash
+   # Start PostgreSQL with Docker
+   docker run --name hardy-auth-db \
+     -e POSTGRES_DB=hardy_auth \
+     -e POSTGRES_USER=auth_service \
+     -e POSTGRES_PASSWORD=auth_password \
+     -p 5433:5432 \
+     -d postgres:15-alpine
+
+   # Wait for database to be ready
+   sleep 5
+
+   # Run migrations and setup
+   npm run db:setup
    npm run db:migrate
    npm run db:generate
+   npm run db:rls
    npm run db:seed
    ```
 
@@ -77,6 +114,19 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 
 The service will be available at `http://localhost:3001`
 
+### Docker Quick Start (Alternative)
+
+```bash
+# Start all services with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f auth-service
+
+# Stop services
+docker-compose down
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -84,7 +134,7 @@ The service will be available at `http://localhost:3001`
 #### Core Configuration
 ```env
 # Database (dedicated PostgreSQL instance recommended)
-DATABASE_URL="postgresql://auth_service:password@localhost:5433/mlpipes_auth"
+DATABASE_URL="postgresql://auth_service:password@localhost:5433/hardy_auth"
 
 # Better Auth
 BETTER_AUTH_SECRET="your-secret-key-here"
@@ -113,65 +163,203 @@ FHIR_SERVER_URL="https://your-fhir-server.com"
 
 ### Database Configuration
 
-MLPipes Auth Service requires a **dedicated PostgreSQL instance** for security and compliance:
+Hardy Auth Service requires a **dedicated PostgreSQL instance** for security and compliance:
 
-- **Database Name**: `mlpipes_auth`
+- **Database Name**: `hardy_auth`
 - **Port**: `5433` (separate from application databases)
 - **User**: `auth_service`
 - **SSL**: Required in production
 - **Connection Pool**: 20 max connections
 - **Backup**: Daily automated backups with 30-day retention
 
-## API Documentation
+## API Usage Examples
 
-### Authentication Endpoints (tRPC)
+### Authentication API (tRPC)
 
-#### User Management
+#### User Registration
 ```typescript
-auth.signUp: mutation          // User registration
-auth.signIn: mutation          // Email/password login
-auth.magicLink: mutation       // Magic link authentication
-auth.verifyEmail: mutation     // Email verification
-auth.session.refresh: mutation // Refresh session token
-auth.session.revoke: mutation  // Revoke session
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from './src/server/routers';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3001/api/trpc',
+    }),
+  ],
+});
+
+// Register a new user
+const newUser = await client.auth.signUp.mutate({
+  email: 'doctor@hospital.com',
+  password: 'SecurePassword123!',
+  firstName: 'John',
+  lastName: 'Doe',
+  organizationId: 'org_123',
+  licenseNumber: 'MD12345',
+  npiNumber: '1234567890',
+  specialties: ['Internal Medicine', 'Cardiology']
+});
 ```
 
-#### Multi-Factor Authentication
+#### User Login with 2FA
 ```typescript
-auth.twoFactor.setup: mutation    // Setup TOTP 2FA
-auth.twoFactor.verify: mutation   // Verify 2FA token
-auth.passkey.register: mutation   // Register passkey/WebAuthn
-auth.passkey.authenticate: mutation // Authenticate with passkey
+// Step 1: Initial login
+const loginResult = await client.auth.signIn.mutate({
+  email: 'doctor@hospital.com',
+  password: 'SecurePassword123!'
+});
+
+// Step 2: If 2FA is enabled, verify the code
+if (loginResult.requiresTwoFactor) {
+  const session = await client.auth.twoFactor.verify.mutate({
+    userId: loginResult.userId,
+    code: '123456', // Code from authenticator app or SMS
+    type: 'totp' // or 'sms'
+  });
+}
 ```
 
-### OAuth2 Endpoints
+#### Magic Link Authentication
+```typescript
+// Request magic link
+await client.auth.magicLink.request.mutate({
+  email: 'user@example.com',
+  organizationId: 'org_123'
+});
 
-```
-GET  /api/oauth/authorize      # Authorization endpoint
-POST /api/oauth/token          # Token endpoint
-POST /api/oauth/introspect     # Token introspection
-POST /api/oauth/revoke         # Token revocation
-```
-
-### SMART on FHIR Endpoints
-
-```
-GET  /api/fhir/metadata        # FHIR capability statement
-POST /api/fhir/launch          # SMART launch endpoint
-GET  /api/fhir/authorize       # SMART authorize endpoint
-POST /api/fhir/token           # SMART token endpoint
+// Verify magic link (usually handled by clicking the link)
+const session = await client.auth.magicLink.verify.mutate({
+  token: 'magic_link_token_from_email'
+});
 ```
 
-### Admin API
+#### Passkey Registration
+```typescript
+// Register a new passkey
+const passkey = await client.auth.passkey.register.mutate({
+  userId: 'user_123',
+  deviceName: 'MacBook Pro Touch ID'
+});
 
+// Authenticate with passkey
+const session = await client.auth.passkey.authenticate.mutate({
+  credentialId: passkey.credentialId,
+  // WebAuthn assertion data
+  assertion: {
+    // ... WebAuthn response
+  }
+});
 ```
-GET    /api/admin/users         # List users
-POST   /api/admin/users         # Create user
-PUT    /api/admin/users/:id     # Update user
-DELETE /api/admin/users/:id     # Delete user
-GET    /api/admin/organizations # List organizations
-GET    /api/admin/audit-logs    # Audit logs
-GET    /api/admin/metrics       # Authentication metrics
+
+### Organization Management API
+
+```typescript
+// Create organization
+const org = await client.organization.create.mutate({
+  name: 'General Hospital',
+  slug: 'general-hospital',
+  organizationType: 'hospital',
+  practiceNpi: '1234567890',
+  mfaRequired: true,
+  sessionTimeout: 1800, // 30 minutes
+  complianceSettings: {
+    hipaaEnabled: true,
+    auditRetentionDays: 2555, // 7 years
+    encryptionRequired: true
+  }
+});
+
+// Invite member to organization
+await client.organization.inviteMember.mutate({
+  organizationId: org.id,
+  email: 'nurse@hospital.com',
+  role: 'clinician',
+  departmentId: 'dept_cardiology',
+  permissions: ['patient:read', 'appointment:manage']
+});
+```
+
+### REST API Examples
+
+#### OAuth2 Authorization Flow
+```bash
+# 1. Redirect user to authorization endpoint
+curl -X GET "http://localhost:3001/api/oauth/authorize?\
+client_id=your_client_id&\
+redirect_uri=https://app.example.com/callback&\
+response_type=code&\
+scope=openid profile email&\
+state=random_state_string"
+
+# 2. Exchange authorization code for token
+curl -X POST "http://localhost:3001/api/oauth/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=authorization_code" \
+  -d "code=auth_code_from_callback" \
+  -d "client_id=your_client_id" \
+  -d "client_secret=your_client_secret" \
+  -d "redirect_uri=https://app.example.com/callback"
+
+# Response
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "refresh_token_string",
+  "id_token": "eyJhbGciOiJSUzI1NiIs..."
+}
+```
+
+#### SMART on FHIR Launch
+```javascript
+// SMART on FHIR Authorization
+const smartAuth = {
+  authorize: 'http://localhost:3001/api/fhir/authorize',
+  token: 'http://localhost:3001/api/fhir/token',
+
+  // Request authorization
+  async launchSMARTApp() {
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: 'smart_app_id',
+      scope: 'launch patient/*.read',
+      redirect_uri: 'https://app.example.com/smart/callback',
+      aud: 'https://fhir.hospital.com/fhir',
+      launch: 'launch_token_from_ehr'
+    });
+
+    window.location.href = `${this.authorize}?${params}`;
+  }
+};
+```
+
+### Admin API Examples
+
+```typescript
+// List users with filters
+const users = await client.admin.users.list.query({
+  organizationId: 'org_123',
+  role: 'clinician',
+  limit: 50,
+  offset: 0
+});
+
+// Get audit logs
+const auditLogs = await client.admin.auditLogs.query({
+  organizationId: 'org_123',
+  userId: 'user_456',
+  action: 'LOGIN_SUCCESS',
+  startDate: '2024-01-01',
+  endDate: '2024-01-31'
+});
+
+// Get authentication metrics
+const metrics = await client.admin.metrics.query({
+  organizationId: 'org_123',
+  period: '7d' // last 7 days
+});
+// Response: { totalLogins: 1250, failedLogins: 23, newUsers: 45, ... }
 ```
 
 ## Development
@@ -233,8 +421,8 @@ The service includes comprehensive testing:
 docker-compose up -d
 
 # Or build manually
-docker build -t mlpipes/auth-service .
-docker run -p 3001:3000 mlpipes/auth-service
+docker build -t hardy/auth-service .
+docker run -p 3001:3000 hardy/auth-service
 ```
 
 ### Production Deployment
@@ -288,9 +476,9 @@ docker run -p 3001:3000 mlpipes/auth-service
 
 #### JavaScript/TypeScript
 ```typescript
-import { createMLPipesAuthClient } from '@mlpipes/auth-client';
+import { createHardyAuthClient } from '@hardy/auth-client';
 
-const auth = createMLPipesAuthClient({
+const auth = createHardyAuthClient({
   baseUrl: 'https://auth.yourcompany.com',
   clientId: 'your-client-id'
 });
@@ -304,13 +492,13 @@ const session = await auth.signIn({
 
 #### React Integration
 ```typescript
-import { MLPipesAuthProvider, useAuth } from '@mlpipes/auth-react';
+import { HardyAuthProvider, useAuth } from '@hardy/auth-react';
 
 function App() {
   return (
-    <MLPipesAuthProvider config={{ baseUrl: 'https://auth.yourcompany.com' }}>
+    <HardyAuthProvider config={{ baseUrl: 'https://auth.yourcompany.com' }}>
       <YourApp />
-    </MLPipesAuthProvider>
+    </HardyAuthProvider>
   );
 }
 
@@ -322,7 +510,7 @@ function YourApp() {
 
 ### EHR Integration
 
-MLPipes Auth Service supports SMART on FHIR for seamless EHR integration:
+Hardy Auth Service supports SMART on FHIR for seamless EHR integration:
 
 - **SMART App Launch**: Standalone and EHR-integrated launches
 - **FHIR Scopes**: Patient, user, and system scopes
@@ -357,14 +545,14 @@ MLPipes Auth Service supports SMART on FHIR for seamless EHR integration:
 
 ### Documentation
 
-- **API Reference**: [https://docs.mlpipes.ai/auth-service/api](https://docs.mlpipes.ai/auth-service/api)
-- **Integration Guide**: [https://docs.mlpipes.ai/auth-service/integration](https://docs.mlpipes.ai/auth-service/integration)
-- **Security Guide**: [https://docs.mlpipes.ai/auth-service/security](https://docs.mlpipes.ai/auth-service/security)
+- **API Reference**: [https://docs.mlpipes.ai/hardy/api](https://docs.mlpipes.ai/hardy/api)
+- **Integration Guide**: [https://docs.mlpipes.ai/hardy/integration](https://docs.mlpipes.ai/hardy/integration)
+- **Security Guide**: [https://docs.mlpipes.ai/hardy/security](https://docs.mlpipes.ai/hardy/security)
 
 ### Community & Support
 
-- **GitHub Issues**: [https://github.com/mlpipes/auth-service/issues](https://github.com/mlpipes/auth-service/issues)
-- **Discussions**: [https://github.com/mlpipes/auth-service/discussions](https://github.com/mlpipes/auth-service/discussions)
+- **GitHub Issues**: [https://github.com/mlpipes/hardy/issues](https://github.com/mlpipes/hardy/issues)
+- **Discussions**: [https://github.com/mlpipes/hardy/discussions](https://github.com/mlpipes/hardy/discussions)
 - **Email Support**: [support@mlpipes.ai](mailto:support@mlpipes.ai)
 
 ## Contributing
@@ -385,7 +573,7 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 
 ## License
 
-MLPipes Auth Service is licensed under the [MIT License](LICENSE).
+Hardy Auth Service is licensed under the [MIT License](LICENSE).
 
 ## Roadmap
 
@@ -408,9 +596,13 @@ MLPipes Auth Service is licensed under the [MIT License](LICENSE).
 - 📋 Compliance automation tools
 - 📋 Advanced analytics dashboard
 
+## Developer Resources
+
+For comprehensive development documentation including architecture details, API reference, deployment guides, and CI/CD setup, please refer to our **[Developer Guide](docs/DEVELOPER_GUIDE.md)**.
+
 ---
 
-**MLPipes Auth Service** - Secure, compliant authentication for healthcare applications.
+**Hardy Auth Service** - Secure, compliant authentication for healthcare applications.
 
 Author: Alfeo A. Sabay, MLPipes LLC
 
