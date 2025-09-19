@@ -37,6 +37,9 @@ yarn-error.log*
 CLAUDE.md
 *-command-messageinit-is-analyzing-your-codebase.txt
 
+# Local documentation (keep locally, exclude from repo)
+docs/DUAL_STAGE_IMPLEMENTATION_PLAN.md
+
 # vercel
 .vercel
 
