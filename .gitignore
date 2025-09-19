@@ -35,6 +35,7 @@ yarn-error.log*
 
 # Claude AI configuration
 CLAUDE.md
+*-command-messageinit-is-analyzing-your-codebase.txt
 
 # vercel
 .vercel
