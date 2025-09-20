@@ -4,6 +4,8 @@
 
 Open-source authentication and authorization service designed specifically for healthcare applications with compliance as the foundational priority. Built on the robust [Better Auth](https://github.com/better-auth/better-auth) framework, this service provides secure, HIPAA-compliant authentication with SOC 2 Type II and HITRUST readiness, supporting modern authentication methods including passkeys, multi-factor authentication, and healthcare-specific protocols like SMART on FHIR.
 
+📋 **[View Complete Feature Roadmap & Development Status →](docs/feature-checklist.md)**
+
 ## Built on Better Auth
 
 This service leverages the powerful [Better Auth](https://github.com/better-auth/better-auth) authentication library, extending it with healthcare-specific compliance features and multi-tenant architecture. Better Auth provides the solid foundation for modern authentication patterns while this implementation adds the necessary compliance layers for healthcare environments.
@@ -599,6 +601,8 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 ## Developer Resources
 
 For comprehensive development documentation including architecture details, API reference, deployment guides, and CI/CD setup, please refer to our **[Developer Guide](docs/DEVELOPER_GUIDE.md)**.
+
+For detailed feature roadmap, implementation status, and development priorities, see our **[Feature Development Checklist](docs/feature-checklist.md)**.
 
 ---
 
