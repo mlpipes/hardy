@@ -1,183 +1,325 @@
 /**
- * MLPipes Auth Service - Email Service
- * HIPAA-compliant email service with professional templates
+ * Email Service - AWS SES Integration for Hardy Auth
+ * Handles transactional emails with healthcare compliance
  */
 
-import nodemailer from 'nodemailer'
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
+
+// Initialize AWS SES client
+const sesClient = new SESClient({
+  region: process.env.AWS_SES_REGION || 'us-east-1',
+  // Use AWS SDK default credential chain (includes AWS CLI profiles)
+  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && {
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  }),
+});
 
 interface EmailOptions {
-  to: string
-  subject: string
-  html: string
-  text?: string
+  to: string;
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
 }
 
-interface VerificationEmailData {
-  firstName?: string
-  verificationUrl: string
-  expiresIn: string
+interface VerificationEmailOptions {
+  userEmail: string;
+  userName: string | null;
+  verificationUrl: string;
+  organizationName?: string;
 }
 
-interface MagicLinkEmailData {
-  firstName?: string
-  magicLinkUrl: string
-  expiresIn: string
-}
+// Initialize SMTP transporter (lazy loaded)
+let smtpTransporter: nodemailer.Transporter | null = null;
 
-interface TwoFactorEmailData {
-  firstName?: string
-  otp: string
-  expiresIn: string
-}
-
-export class EmailService {
-  private transporter: nodemailer.Transporter
-
-  constructor() {
-    this.transporter = nodemailer.createTransporter({
+function createSMTPTransporter() {
+  if (!smtpTransporter && isSmtpConfigured()) {
+    smtpTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_PORT === '465',
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-    })
+    });
+  }
+  return smtpTransporter;
+}
+
+/**
+ * Check if SMTP is configured
+ */
+function isSmtpConfigured(): boolean {
+  return !!(
+    process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.SMTP_USER &&
+    process.env.SMTP_PASS
+  );
+}
+
+/**
+ * Send email using SMTP
+ */
+async function sendEmailViaSMTP(options: EmailOptions): Promise<boolean> {
+  const transporter = createSMTPTransporter();
+  if (!transporter) {
+    console.log('❌ SMTP not configured, cannot send email');
+    return false;
   }
 
-  async sendEmail(options: EmailOptions): Promise<void> {
-    try {
-      const info = await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'MLPipes Auth <noreply@mlpipes.ai>',
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text || this.htmlToText(options.html),
-      })
+  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.AWS_SES_FROM_EMAIL || 'noreply@hardy-auth.com';
+  const fromName = process.env.SMTP_FROM_NAME || 'Hardy Auth Service';
 
-      console.log('Email sent successfully:', info.messageId)
-    } catch (error) {
-      console.error('Failed to send email:', error)
-      throw new Error('Email sending failed')
-    }
-  }
+  console.log('📧 SMTP Configuration Debug:');
+  console.log('- SMTP_HOST:', process.env.SMTP_HOST);
+  console.log('- SMTP_PORT:', process.env.SMTP_PORT);
+  console.log('- SMTP_USER:', process.env.SMTP_USER);
+  console.log('- SMTP_SECURE:', process.env.SMTP_SECURE);
+  console.log('- FROM:', `${fromName} <${fromEmail}>`);
+  console.log('- TO:', options.to);
 
-  async sendVerificationEmail(email: string, data: VerificationEmailData): Promise<void> {
-    const html = this.getVerificationEmailTemplate(data)
-    await this.sendEmail({
-      to: email,
-      subject: 'MLPipes Auth - Verify Your Email Address',
-      html,
-    })
-  }
+  try {
+    console.log('🚀 Attempting SMTP send...');
+    const result = await transporter.sendMail({
+      from: `${fromName} <${fromEmail}>`,
+      to: options.to,
+      subject: options.subject,
+      html: options.htmlContent,
+      text: options.textContent,
+    });
 
-  async sendMagicLinkEmail(email: string, data: MagicLinkEmailData): Promise<void> {
-    const html = this.getMagicLinkEmailTemplate(data)
-    await this.sendEmail({
-      to: email,
-      subject: 'MLPipes Auth - Sign In with Magic Link',
-      html,
-    })
-  }
-
-  async sendTwoFactorEmail(email: string, data: TwoFactorEmailData): Promise<void> {
-    const html = this.getTwoFactorEmailTemplate(data)
-    await this.sendEmail({
-      to: email,
-      subject: 'MLPipes Auth - Your Verification Code',
-      html,
-    })
-  }
-
-  private getVerificationEmailTemplate(data: VerificationEmailData): string {
-    return `
-      <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">MLPipes Auth</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Secure Healthcare Authentication</p>
-        </div>
-        <div style="padding: 40px 30px; background: white;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0;">Welcome${data.firstName ? `, ${data.firstName}` : ''}!</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 20px 0;">
-            Thank you for creating your MLPipes Auth account. To complete your registration and ensure the security of your account, please verify your email address.
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.verificationUrl}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              Verify Email Address
-            </a>
-          </div>
-          <p style="color: #9ca3af; font-size: 14px; margin: 30px 0 0 0;">
-            This verification link will expire in ${data.expiresIn}. If you didn't create this account, please contact our support team.
-          </p>
-        </div>
-        <div style="padding: 20px 30px; background: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            MLPipes Auth - Secure Healthcare Authentication
-          </p>
-        </div>
-      </div>
-    `
-  }
-
-  private getMagicLinkEmailTemplate(data: MagicLinkEmailData): string {
-    return `
-      <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">MLPipes Auth</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Secure Healthcare Authentication</p>
-        </div>
-        <div style="padding: 40px 30px; background: white;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0;">Sign in to your account</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0;">
-            Click the button below to securely sign in to your MLPipes Auth account. This link will expire in ${data.expiresIn} for your security.
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.magicLinkUrl}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              Sign In Securely
-            </a>
-          </div>
-          <p style="color: #9ca3af; font-size: 14px; margin: 30px 0 0 0;">
-            If you didn't request this link, you can safely ignore this email.
-          </p>
-        </div>
-        <div style="padding: 20px 30px; background: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            MLPipes Auth - Secure Healthcare Authentication
-          </p>
-        </div>
-      </div>
-    `
-  }
-
-  private getTwoFactorEmailTemplate(data: TwoFactorEmailData): string {
-    return `
-      <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">MLPipes Auth</h1>
-        </div>
-        <div style="padding: 40px 30px; background: white; text-align: center;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0;">Verification Code</h2>
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #667eea;">${data.otp}</span>
-          </div>
-          <p style="color: #6b7280; margin: 20px 0 0 0;">
-            This code expires in ${data.expiresIn}. Do not share this code with anyone.
-          </p>
-        </div>
-      </div>
-    `
-  }
-
-  private htmlToText(html: string): string {
-    return html
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+    console.log('✅ SMTP send result:', {
+      messageId: result.messageId,
+      response: result.response,
+      accepted: result.accepted,
+      rejected: result.rejected,
+      pending: result.pending
+    });
+    console.log('✅ Email sent successfully via SMTP to:', options.to);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send email via SMTP:', error);
+    console.error('❌ SMTP Error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
+    return false;
   }
 }
 
-// Export singleton instance
-export const emailService = new EmailService()
+/**
+ * Send email using AWS SES
+ */
+async function sendEmailViaSES(options: EmailOptions): Promise<boolean> {
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL || 'noreply@hardy-auth.com';
 
-// Export for direct use
-export const sendEmail = (options: EmailOptions) => emailService.sendEmail(options)
+  try {
+    const command = new SendEmailCommand({
+      Source: fromEmail,
+      Destination: {
+        ToAddresses: [options.to],
+      },
+      Message: {
+        Subject: {
+          Data: options.subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: options.htmlContent,
+            Charset: 'UTF-8',
+          },
+          ...(options.textContent && {
+            Text: {
+              Data: options.textContent,
+              Charset: 'UTF-8',
+            },
+          }),
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log('✅ Email sent successfully via AWS SES to:', options.to);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send email via AWS SES:', error);
+    return false;
+  }
+}
+
+/**
+ * Send email with intelligent fallback (SES → SMTP → Development)
+ */
+export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  // Try AWS SES first if configured
+  const hasAwsSesConfig = !!(process.env.AWS_SES_FROM_EMAIL && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+
+  if (hasAwsSesConfig) {
+    const sesSuccess = await sendEmailViaSES(options);
+    if (sesSuccess) {
+      return true;
+    }
+    console.log('🔄 AWS SES failed, trying SMTP backup...');
+  }
+
+  // Try SMTP backup if configured
+  if (isSmtpConfigured()) {
+    const smtpSuccess = await sendEmailViaSMTP(options);
+    if (smtpSuccess) {
+      return true;
+    }
+    console.log('🔄 SMTP also failed, falling back to development mode');
+  }
+
+  // Both failed or not configured
+  console.log('❌ All email services failed or not configured');
+  return false;
+}
+
+/**
+ * Send email verification email
+ */
+export async function sendVerificationEmail(options: VerificationEmailOptions): Promise<boolean> {
+  const { userEmail, userName, verificationUrl, organizationName } = options;
+
+  const displayName = userName || userEmail.split('@')[0];
+  const orgText = organizationName ? ` for ${organizationName}` : '';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Verify Your Email - Hardy Auth</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; text-align: center; padding: 32px 24px; }
+        .logo { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+        .content { padding: 32px 24px; }
+        .verification-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin: 24px 0; text-align: center; }
+        .verify-button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; margin: 16px 0; }
+        .footer { background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 24px; text-align: center; font-size: 14px; color: #64748b; }
+        .security-notice { background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin: 16px 0; }
+        .warning-icon { color: #f59e0b; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">🛡️ Hardy Auth</div>
+          <p>Healthcare Authentication System</p>
+        </div>
+
+        <div class="content">
+          <h1>Verify Your Email Address</h1>
+
+          <p>Hello <strong>${displayName}</strong>,</p>
+
+          <p>Thank you for creating your Hardy Auth account${orgText}. To complete your registration and secure your account, please verify your email address by clicking the button below:</p>
+
+          <div class="verification-box">
+            <h2>Email Verification Required</h2>
+            <p>Click the button below to verify <strong>${userEmail}</strong></p>
+            <a href="${verificationUrl}" class="verify-button">Verify Email Address</a>
+            <p style="margin-top: 16px; font-size: 14px; color: #64748b;">
+              This link will expire in 24 hours for your security.
+            </p>
+          </div>
+
+          <div class="security-notice">
+            <p><span class="warning-icon">⚠️</span> <strong>Security Notice:</strong></p>
+            <ul style="margin: 8px 0; padding-left: 20px;">
+              <li>This email contains a secure verification link</li>
+              <li>Only click the button if you recently created a Hardy Auth account</li>
+              <li>If you didn't create this account, please ignore this email</li>
+              <li>For healthcare compliance, all account activities are logged</li>
+            </ul>
+          </div>
+
+          <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; background-color: #f8fafc; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 14px;">
+            ${verificationUrl}
+          </p>
+
+          <p>Once verified, you'll have full access to your Hardy Auth account and all healthcare authentication features.</p>
+
+          <p>If you have any questions or need assistance, please contact our support team.</p>
+        </div>
+
+        <div class="footer">
+          <p><strong>Hardy Auth</strong> - Healthcare Authentication System</p>
+          <p>This email was sent to ${userEmail} because you created a Hardy Auth account.</p>
+          <p>© ${new Date().getFullYear()} Hardy Auth. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+Hardy Auth - Verify Your Email Address
+
+Hello ${displayName},
+
+Thank you for creating your Hardy Auth account${orgText}. To complete your registration and secure your account, please verify your email address.
+
+Verification Link: ${verificationUrl}
+
+This link will expire in 24 hours for your security.
+
+SECURITY NOTICE:
+- This email contains a secure verification link
+- Only click the link if you recently created a Hardy Auth account
+- If you didn't create this account, please ignore this email
+- For healthcare compliance, all account activities are logged
+
+Once verified, you'll have full access to your Hardy Auth account and all healthcare authentication features.
+
+If you have any questions or need assistance, please contact our support team.
+
+Hardy Auth - Healthcare Authentication System
+© ${new Date().getFullYear()} Hardy Auth. All rights reserved.
+  `;
+
+  return sendEmail({
+    to: userEmail,
+    subject: `Verify Your Email Address - Hardy Auth${orgText}`,
+    htmlContent,
+    textContent,
+  });
+}
+
+/**
+ * Check if AWS SES is properly configured
+ */
+export function isEmailServiceConfigured(): boolean {
+  // Check if any email service is configured
+  const hasAwsSes = !!(process.env.AWS_SES_FROM_EMAIL && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+  const hasSmtp = isSmtpConfigured();
+
+  return hasAwsSes || hasSmtp;
+}
+
+/**
+ * Development fallback - log email content
+ */
+export function logEmailForDevelopment(options: VerificationEmailOptions): void {
+  console.log('📧 EMAIL VERIFICATION (Development Mode)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`👤 User: ${options.userName || 'New User'}`);
+  console.log(`📮 Email: ${options.userEmail}`);
+  console.log(`🏥 Organization: ${options.organizationName || 'N/A'}`);
+  console.log(`🔗 Verification URL: ${options.verificationUrl}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('💡 Copy the verification URL above to test email verification');
+}

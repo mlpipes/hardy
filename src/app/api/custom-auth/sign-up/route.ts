@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sendVerificationEmail, isEmailServiceConfigured, logEmailForDevelopment } from '@/lib/email-service';
 
 const prisma = new PrismaClient();
 
@@ -63,17 +65,77 @@ export async function POST(request: Request) {
       }
     });
 
+    // Create email verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpiresAt = new Date();
+    verificationExpiresAt.setHours(verificationExpiresAt.getHours() + 24); // 24 hours
+
+    await prisma.verification.create({
+      data: {
+        identifier: user.email,
+        value: verificationToken,
+        expiresAt: verificationExpiresAt
+      }
+    });
+
+    // Send verification email
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+
+    // Send verification email with intelligent fallback (SES → SMTP → Development)
+    let emailSent = false;
+
+    if (isEmailServiceConfigured()) {
+      try {
+        emailSent = await sendVerificationEmail({
+          userEmail: user.email,
+          userName: user.name,
+          verificationUrl,
+          organizationName: undefined // TODO: Add organization context
+        });
+
+        if (emailSent) {
+          console.log('✅ Welcome email sent successfully to:', user.email);
+        }
+      } catch (error) {
+        console.error('Email service error during sign-up:', error);
+        emailSent = false;
+      }
+    }
+
+    // Fallback to development logging if email service not configured or failed
+    if (!emailSent) {
+      logEmailForDevelopment({
+        userEmail: user.email,
+        userName: user.name,
+        verificationUrl,
+        organizationName: undefined
+      });
+    }
+
     // Set session cookie
     const response = NextResponse.json({
       data: {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name
+          name: user.name,
+          emailVerified: user.emailVerified
         },
         session: {
           token: session.token
-        }
+        },
+        verification: {
+          emailSent,
+          message: emailSent
+            ? 'Verification email sent successfully'
+            : 'Verification email logged to console (development mode)'
+        },
+        // Development only
+        ...(process.env.NODE_ENV === 'development' && !emailSent && {
+          verificationUrl,
+          devNote: 'Check console for verification URL'
+        })
       }
     });
 

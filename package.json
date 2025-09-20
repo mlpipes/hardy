@@ -32,6 +32,7 @@
     "hardy:status": "docker-compose ps && docker exec hardy-auth-db psql -U auth_service -d hardy_auth -c 'SELECT COUNT(*) as tables FROM information_schema.tables WHERE table_schema = '\"'\"'public'\"'\"';'"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.893.0",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@prisma/client": "^6.12.0",
@@ -52,7 +53,7 @@
     "lucide-react": "^0.294.0",
     "nanoid": "^5.0.4",
     "next": "^14.2.5",
-    "nodemailer": "^6.9.8",
+    "nodemailer": "^6.10.1",
     "prisma": "^6.12.0",
     "qrcode": "^1.5.3",
     "react": "^18.3.1",
@@ -74,7 +75,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/node": "^20.10.0",
-    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer": "^6.4.19",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.17",

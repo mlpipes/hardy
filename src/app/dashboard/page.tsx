@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Shield, Users, Activity, Settings, LogOut, User, Building2 } from 'lucide-react';
 import { customAuthClient } from '@/lib/custom-auth-client';
+import { EmailVerificationBanner } from '@/components/EmailVerificationBanner';
 
 interface User {
   id: string;
@@ -97,6 +98,14 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Email Verification Banner */}
+          <div className="mb-6">
+            <EmailVerificationBanner
+              userEmail={user.email}
+              emailVerified={user.emailVerified}
+            />
+          </div>
+
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-2 text-gray-600">Welcome to Hardy Auth Healthcare Authentication System</p>
