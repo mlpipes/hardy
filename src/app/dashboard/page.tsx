@@ -6,10 +6,60 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Shield, Users, Activity, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Shield, Users, Activity, Settings, LogOut, User, Building2 } from 'lucide-react';
+import { customAuthClient } from '@/lib/custom-auth-client';
+
+interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  emailVerified: boolean;
+}
 
 export default function Dashboard() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      const result = await customAuthClient.getCurrentUser();
+
+      if (result.data) {
+        setUser(result.data.user);
+      } else {
+        // Not authenticated, redirect to login
+        router.push('/');
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [router]);
+
+  const handleSignOut = async () => {
+    const result = await customAuthClient.signOut();
+    if (result.data) {
+      router.push('/');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Shield className="h-8 w-8 text-blue-600 mx-auto mb-4 animate-spin" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to login
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -22,15 +72,23 @@ export default function Dashboard() {
               <span className="text-xl font-bold text-gray-900">Hardy Auth</span>
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => {
-                  // Sign out logic will be added
-                  router.push('/');
-                }}
-                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Sign Out
-              </button>
+              {/* User Info */}
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <User className="h-5 w-5 text-gray-400" />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">{user.name || 'User'}</p>
+                    <p className="text-gray-500">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -42,6 +100,55 @@ export default function Dashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-2 text-gray-600">Welcome to Hardy Auth Healthcare Authentication System</p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button
+              onClick={() => router.push('/dashboard/users')}
+              className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left"
+            >
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-blue-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">User Management</h3>
+                  <p className="text-sm text-gray-600">Manage user accounts and permissions</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/dashboard/organizations')}
+              className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left"
+            >
+              <div className="flex items-center">
+                <Building2 className="h-8 w-8 text-indigo-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Organizations</h3>
+                  <p className="text-sm text-gray-600">Manage healthcare organizations</p>
+                </div>
+              </div>
+            </button>
+
+            <button className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left">
+              <div className="flex items-center">
+                <Settings className="h-8 w-8 text-green-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Settings</h3>
+                  <p className="text-sm text-gray-600">Configure system settings</p>
+                </div>
+              </div>
+            </button>
+
+            <button className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left">
+              <div className="flex items-center">
+                <Activity className="h-8 w-8 text-purple-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Audit Logs</h3>
+                  <p className="text-sm text-gray-600">View system activity logs</p>
+                </div>
+              </div>
+            </button>
           </div>
 
           {/* Stats Grid */}

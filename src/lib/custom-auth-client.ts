@@ -62,10 +62,27 @@ export const customAuthClient = {
         method: 'POST',
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        return { data: true, error: null };
+        return { data: data.data, error: null };
       } else {
-        return { data: null, error: { message: 'Sign out failed' } };
+        return { data: null, error: data.error };
+      }
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  getCurrentUser: async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      const data = await response.json();
+
+      if (response.ok) {
+        return { data: data.data, error: null };
+      } else {
+        return { data: null, error: data.error };
       }
     } catch (error: any) {
       return { data: null, error: { message: error.message } };
