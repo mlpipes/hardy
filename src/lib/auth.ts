@@ -11,11 +11,14 @@ import { phoneNumber } from "better-auth/plugins/phone-number"
 import { organization } from "better-auth/plugins/organization"
 import { admin } from "better-auth/plugins/admin"
 import { PrismaClient } from "@prisma/client"
-import { sendSMS } from "./sms-service"
-import { sendEmail } from "./email-service"
+// import { sendSMS } from "./sms-service"
+// import { sendEmail } from "./email-service"
 import crypto from "crypto"
 
-const prisma = new PrismaClient()
+// Initialize Prisma with the DATABASE_URL from environment
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.DATABASE_URL || "postgresql://auth_service:auth_password@localhost:5434/hardy_auth?sslmode=prefer",
+})
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {

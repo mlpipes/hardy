@@ -5,8 +5,14 @@
 
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
+import { createAuthClient } from "better-auth/client";
 import superjson from 'superjson';
 import type { AppRouter } from '../server/routers';
+
+// Better Auth client
+export const authClient = createAuthClient({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001",
+});
 
 // React tRPC client
 export const trpc = createTRPCReact<AppRouter>();
