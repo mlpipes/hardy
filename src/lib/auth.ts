@@ -11,9 +11,10 @@ import { phoneNumber } from "better-auth/plugins/phone-number"
 import { organization } from "better-auth/plugins/organization"
 import { admin } from "better-auth/plugins/admin"
 import { PrismaClient } from "@prisma/client"
-// import { sendSMS } from "./sms-service"
-// import { sendEmail } from "./email-service"
+import { sendSMS } from "./sms-service"
+import { sendEmail } from "./email-service"
 import crypto from "crypto"
+import * as bcryptjs from "bcryptjs"
 
 // Initialize Prisma with the DATABASE_URL from environment
 const prisma = new PrismaClient({
@@ -39,12 +40,15 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     password: {
       hash: async (password: string) => {
-        const bcrypt = await import("bcryptjs")
-        return bcrypt.hash(password, 12)
+        return bcryptjs.hash(password, 12)
       },
       verify: async (password: string, hash: string) => {
-        const bcrypt = await import("bcryptjs")
-        return bcrypt.compare(password, hash)
+        console.log('🔐 Password verify called:', { hasPassword: !!password, hasHash: !!hash, hashValue: hash?.substring(0, 20) });
+        if (!hash) {
+          console.error('❌ No password hash found in database');
+          return false;
+        }
+        return bcryptjs.compare(password, hash)
       },
     },
   },
