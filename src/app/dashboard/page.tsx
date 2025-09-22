@@ -8,7 +8,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Shield, Users, Activity, Settings, LogOut, User, Building2 } from 'lucide-react';
-import { customAuthClient } from '@/lib/custom-auth-client';
+import { authClient } from '@/lib/better-auth-client';
 import { EmailVerificationBanner } from '@/components/EmailVerificationBanner';
 
 interface User {
@@ -26,10 +26,15 @@ export default function Dashboard() {
   useEffect(() => {
     // Check authentication status
     const checkAuth = async () => {
-      const result = await customAuthClient.getCurrentUser();
+      const session = await authClient.getSession();
 
-      if (result.data) {
-        setUser(result.data.user);
+      if (session?.data) {
+        setUser({
+          id: session.data.user.id,
+          email: session.data.user.email,
+          name: session.data.user.name,
+          emailVerified: session.data.user.emailVerified || false
+        });
       } else {
         // Not authenticated, redirect to login
         router.push('/');
@@ -41,10 +46,8 @@ export default function Dashboard() {
   }, [router]);
 
   const handleSignOut = async () => {
-    const result = await customAuthClient.signOut();
-    if (result.data) {
-      router.push('/');
-    }
+    await authClient.signOut();
+    router.push('/');
   };
 
   if (loading) {

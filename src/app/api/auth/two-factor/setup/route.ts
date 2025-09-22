@@ -4,14 +4,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentSession } from '@/lib/session';
+import { auth } from '@/lib/auth';
 import QRCode from 'qrcode';
 import { generateSecret, generateBackupCodes } from '@/lib/two-factor-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get the current session
-    const session = await getCurrentSession();
+    // Get the current session using Better Auth
+    const session = await auth.api.getSession({
+      headers: req.headers
+    });
 
     if (!session) {
       return NextResponse.json(

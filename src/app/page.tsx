@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { customAuthClient as authClient } from '@/lib/custom-auth-client';
+import { authClient } from '@/lib/better-auth-client';
 
 export default function Home() {
   const router = useRouter();
