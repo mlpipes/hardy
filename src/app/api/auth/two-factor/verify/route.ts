@@ -4,15 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getCurrentSession } from '@/lib/session';
 import { verifyTotpCode } from '@/lib/two-factor-utils';
 
 export async function POST(req: NextRequest) {
   try {
     // Get the current session
-    const session = await auth.api.getSession({
-      headers: req.headers
-    });
+    const session = await getCurrentSession();
 
     if (!session) {
       return NextResponse.json(

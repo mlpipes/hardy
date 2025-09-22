@@ -42,7 +42,9 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
 
   const checkTwoFactorStatus = async () => {
     try {
-      const response = await fetch('/api/auth/two-factor/status');
+      const response = await fetch('/api/auth/two-factor/status', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         setIsEnabled(data.enabled);
@@ -62,6 +64,7 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -98,6 +101,7 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           code: verificationCode,
           secret: setupData.secret
