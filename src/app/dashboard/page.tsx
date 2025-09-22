@@ -139,12 +139,15 @@ export default function Dashboard() {
               </div>
             </button>
 
-            <button className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left">
+            <button
+              onClick={() => router.push('/dashboard/settings')}
+              className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left"
+            >
               <div className="flex items-center">
                 <Settings className="h-8 w-8 text-green-600 mr-3" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Settings</h3>
-                  <p className="text-sm text-gray-600">Configure system settings</p>
+                  <p className="text-sm text-gray-600">Configure security and account settings</p>
                 </div>
               </div>
             </button>
