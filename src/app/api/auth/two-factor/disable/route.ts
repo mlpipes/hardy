@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +25,12 @@ export async function POST(req: NextRequest) {
 
     // Disable 2FA in database
     try {
+      // Remove TwoFactor record
+      await prisma.twoFactor.deleteMany({
+        where: { userId: session.user.id }
+      });
+
+      // Update user to disable 2FA
       await prisma.user.update({
         where: { id: session.user.id },
         data: { twoFactorEnabled: false }

@@ -81,14 +81,28 @@ export default function Home() {
         console.log('Login successful:', result.data);
         // Clear form data for security
         setFormData({ email: '', password: '' });
-        // Redirect to dashboard
-        router.push('/dashboard');
+
+        // Check if user has 2FA enabled - Better Auth returns twoFactorRedirect
+        if (result.data.twoFactorRedirect || result.data.twoFactorRequired) {
+          // Redirect to 2FA verification page
+          router.push('/verify-2fa');
+        } else {
+          // Redirect to dashboard
+          router.push('/dashboard');
+        }
       } else if (result.error) {
         // Clear password on failed login for security
         setFormData(prev => ({ ...prev, password: '' }));
-        setErrors({
-          password: result.error.message || 'Invalid email or password'
-        });
+
+        // Check if this is a 2FA required error
+        if (result.error.code === 'TWO_FACTOR_REQUIRED') {
+          // Redirect to 2FA verification
+          router.push('/verify-2fa');
+        } else {
+          setErrors({
+            password: result.error.message || 'Invalid email or password'
+          });
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);

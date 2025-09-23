@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { QrCode, Smartphone, Shield, AlertTriangle, CheckCircle, Copy, Eye, EyeOff } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
+import { authClient } from '@/lib/better-auth-client';
 
 interface User {
   id: string;
@@ -24,6 +24,7 @@ interface TotpSetupData {
   secret: string;
   qrCode: string;
   backupCodes: string[];
+  totpUri: string;
 }
 
 export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
@@ -34,6 +35,8 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [password, setPassword] = useState('');
 
   // Check current 2FA status
   useEffect(() => {
@@ -42,40 +45,101 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
 
   const checkTwoFactorStatus = async () => {
     try {
+      // Use our custom status endpoint since it works with our schema
       const response = await fetch('/api/auth/two-factor/status');
       if (response.ok) {
         const data = await response.json();
         setIsEnabled(data.enabled);
+      } else {
+        // Fallback: check session data
+        const session = await authClient.getSession();
+        if (session.data?.user) {
+          setIsEnabled(session.data.user.twoFactorEnabled || false);
+        }
       }
     } catch (error) {
       console.error('Failed to check 2FA status:', error);
     }
   };
 
-  const startTwoFactorSetup = async () => {
+  const startTwoFactorSetup = () => {
+    setShowPasswordPrompt(true);
+    setError('');
+  };
+
+  const confirmSetupWithPassword = async () => {
+    if (!password) {
+      setError('Please enter your current password');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/auth/two-factor/setup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+      // Use Better Auth's built-in 2FA enable method
+      const result = await authClient.twoFactor.enable({
+        password: password
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to setup 2FA');
-      }
+      if (result.data) {
+        // Log the actual response to see what Better Auth returns
+        console.log('Better Auth 2FA enable response:', result.data);
+        console.log('Response keys:', Object.keys(result.data));
 
-      const data = await response.json();
-      setSetupData(data);
+        // Better Auth typically returns: { secret, qrCode, backupCodes, uri }
+        // Handle different possible property names from Better Auth
+        const responseData = result.data;
+
+        // Better Auth returns: { totpURI, backupCodes }
+        const totpUri = responseData.totpURI || responseData.totpUri || responseData.uri || '';
+        const backupCodes = responseData.backupCodes || responseData.recoveryCodes || responseData.codes || [];
+
+        // Extract secret from TOTP URI (otpauth://totp/...?secret=SECRET&...)
+        let secret = '';
+        if (totpUri) {
+          const secretMatch = totpUri.match(/secret=([A-Z2-7]+)/i);
+          if (secretMatch) {
+            secret = secretMatch[1];
+          }
+        }
+
+        // Generate QR code data URL from TOTP URI
+        const qrCode = totpUri ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpUri)}` : '';
+
+        console.log('Extracted values:', { secret, qrCode, backupCodes, totpUri });
+
+        if (!secret) {
+          throw new Error('No secret found in TOTP URI from Better Auth');
+        }
+
+        if (!totpUri) {
+          throw new Error('No TOTP URI received from Better Auth');
+        }
+
+        setSetupData({
+          secret,
+          qrCode,
+          backupCodes,
+          totpUri
+        });
+        setShowPasswordPrompt(false);
+        setPassword('');
+      } else if (result.error) {
+        throw new Error(result.error.message || 'Failed to setup 2FA');
+      }
     } catch (error) {
-      setError('Failed to initialize 2FA setup. Please try again.');
+      setError('Failed to initialize 2FA setup. Please check your password and try again.');
       console.error('2FA setup error:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const cancelPasswordPrompt = () => {
+    setShowPasswordPrompt(false);
+    setPassword('');
+    setError('');
   };
 
   const verifyAndEnable = async () => {
@@ -84,35 +148,25 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
       return;
     }
 
-    if (!setupData) {
-      setError('Setup data not available. Please restart the setup process.');
-      return;
-    }
-
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/auth/two-factor/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: verificationCode,
-          secret: setupData.secret
-        }),
+      // Use Better Auth's built-in TOTP verification
+      const result = await authClient.twoFactor.verifyTotp({
+        code: verificationCode
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Verification failed');
+      if (result.data) {
+        setIsEnabled(true);
+        setSuccess('Two-factor authentication has been successfully enabled!');
+        setSetupData(null);
+        setVerificationCode('');
+        // Refresh the 2FA status
+        await checkTwoFactorStatus();
+      } else if (result.error) {
+        throw new Error(result.error.message || 'Verification failed');
       }
-
-      setIsEnabled(true);
-      setSuccess('Two-factor authentication has been successfully enabled!');
-      setSetupData(null);
-      setVerificationCode('');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Invalid verification code. Please try again.');
       console.error('2FA verification error:', error);
@@ -126,25 +180,29 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
       return;
     }
 
+    const currentPassword = prompt('Please enter your current password to disable 2FA:');
+    if (!currentPassword) {
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/auth/two-factor/disable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+      // Use Better Auth's built-in 2FA disable method
+      const result = await authClient.twoFactor.disable({
+        password: currentPassword
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to disable 2FA');
+      if (result.data) {
+        setIsEnabled(false);
+        setSuccess('Two-factor authentication has been disabled.');
+        await checkTwoFactorStatus();
+      } else if (result.error) {
+        throw new Error(result.error.message || 'Failed to disable 2FA');
       }
-
-      setIsEnabled(false);
-      setSuccess('Two-factor authentication has been disabled.');
     } catch (error) {
-      setError('Failed to disable 2FA. Please try again.');
+      setError('Failed to disable 2FA. Please check your password and try again.');
       console.error('2FA disable error:', error);
     } finally {
       setIsLoading(false);
@@ -208,6 +266,53 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
           </button>
         )}
       </div>
+
+      {/* Password Prompt Modal */}
+      {showPasswordPrompt && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4 bg-blue-50">
+          <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Confirm Your Password</h4>
+            <p className="text-sm text-gray-600">
+              To enable two-factor authentication, please enter your current password for security verification.
+            </p>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); confirmSetupWithPassword(); }}>
+            <div>
+              <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">
+                Current Password
+              </label>
+              <input
+                id="current-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your current password"
+                autoFocus
+                autoComplete="current-password"
+              />
+            </div>
+
+            <div className="flex space-x-3 mt-4">
+              <button
+                type="button"
+                onClick={cancelPasswordPrompt}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || !password}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {isLoading ? 'Setting up...' : 'Continue'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Setup Process */}
       {setupData && (

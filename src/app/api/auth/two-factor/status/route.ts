@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,7 +27,10 @@ export async function GET(req: NextRequest) {
     try {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { twoFactorEnabled: true }
+        select: {
+          twoFactorEnabled: true,
+          twoFactor: true
+        }
       });
 
       if (!user) {
@@ -35,8 +40,11 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      // 2FA is enabled if user has both the flag and a TwoFactor record
+      const enabled = user.twoFactorEnabled && !!user.twoFactor;
+
       return NextResponse.json({
-        enabled: user.twoFactorEnabled,
+        enabled: enabled,
         userId: session.user.id
       });
 
