@@ -7,9 +7,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Shield, ArrowLeft, Smartphone, Key, Mail, AlertTriangle, CheckCircle } from 'lucide-react';
-import { customAuthClient } from '@/lib/custom-auth-client';
+import { Shield, Smartphone, Key, Mail, AlertTriangle, CheckCircle } from 'lucide-react';
+import { authClient } from '@/lib/better-auth-client';
 import { TwoFactorSetup } from '@/components/TwoFactorSetup';
+import { Breadcrumb, breadcrumbConfigs } from '@/components/Breadcrumb';
 
 interface User {
   id: string;
@@ -27,7 +28,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const result = await customAuthClient.getCurrentUser();
+      const result = await authClient.getSession();
 
       if (result.data) {
         setUser(result.data.user);
@@ -57,28 +58,12 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="flex items-center text-gray-500 hover:text-gray-700 mr-4"
-              >
-                <ArrowLeft className="h-5 w-5 mr-1" />
-                <span>Back to Dashboard</span>
-              </button>
-              <Shield className="h-8 w-8 text-blue-600 mr-3" />
-              <span className="text-xl font-bold text-gray-900">Hardy Auth Settings</span>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Breadcrumb */}
+          <Breadcrumb items={breadcrumbConfigs.settings} className="mb-6" />
+
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
             <p className="mt-2 text-gray-600">Manage your security settings and preferences</p>

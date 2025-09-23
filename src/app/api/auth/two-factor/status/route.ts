@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,18 +21,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check 2FA status using Better Auth
+    // Check 2FA status from database
     try {
-      // Note: This would use the Better Auth twoFactor plugin
-      // const twoFactorStatus = await auth.api.twoFactor.getStatus({
-      //   userId: session.user.id
-      // });
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { twoFactorEnabled: true }
+      });
 
-      // For now, we'll mock the status based on user data
-      const twoFactorEnabled = false; // This would come from the database
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
 
       return NextResponse.json({
-        enabled: twoFactorEnabled,
+        enabled: user.twoFactorEnabled,
         userId: session.user.id
       });
 

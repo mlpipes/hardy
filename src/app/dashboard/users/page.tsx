@@ -13,6 +13,7 @@ import {
   Mail,
   Shield
 } from 'lucide-react';
+import { Breadcrumb, breadcrumbConfigs } from '@/components/Breadcrumb';
 
 interface User {
   id: string;
@@ -107,6 +108,9 @@ export default function UsersPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <Breadcrumb items={breadcrumbConfigs.users} className="mb-6" />
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

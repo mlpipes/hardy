@@ -130,8 +130,16 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
     setError('');
 
     try {
-      // Note: This would use the Better Auth twoFactor plugin
-      // await authClient.twoFactor.disable();
+      const response = await fetch('/api/auth/two-factor/disable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to disable 2FA');
+      }
 
       setIsEnabled(false);
       setSuccess('Two-factor authentication has been disabled.');

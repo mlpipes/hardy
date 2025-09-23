@@ -35,7 +35,35 @@ export interface ValidatedSession {
 export async function getCurrentSession(): Promise<ValidatedSession | null> {
   try {
     const cookieStore = cookies();
-    const sessionToken = cookieStore.get('hardy-auth-session')?.value;
+
+    // Try multiple possible cookie names
+    const possibleCookieNames = [
+      'hardy_auth.session_token',
+      'hardy_auth.session',
+      'hardy_auth_session',
+      'better-auth.session',
+      'session',
+      'auth-session'
+    ];
+
+    let sessionToken = null;
+
+    for (const cookieName of possibleCookieNames) {
+      const cookie = cookieStore.get(cookieName);
+      if (cookie?.value) {
+        const rawToken = cookie.value;
+        // Better Auth cookies might be signed (token.signature), extract just the token part
+        sessionToken = rawToken.split('.')[0];
+        console.log(`🎯 getCurrentSession found token with name: ${cookieName}, raw: ${rawToken}, extracted: ${sessionToken}`);
+        break;
+      }
+    }
+
+    if (!sessionToken) {
+      console.log('❌ getCurrentSession: No session token found in cookies');
+      const allCookies = cookieStore.getAll();
+      console.log('🍪 All available cookies:', allCookies.map(c => c.name));
+    }
 
     if (!sessionToken) {
       return null;
@@ -81,12 +109,39 @@ export async function getCurrentSession(): Promise<ValidatedSession | null> {
  * Require authenticated session (for API routes)
  */
 export async function requireSession(request: Request): Promise<ValidatedSession> {
-  const sessionToken = request.headers.get('cookie')
-    ?.split(';')
-    .find(c => c.trim().startsWith('hardy-auth-session='))
-    ?.split('=')[1];
+  const cookieHeader = request.headers.get('cookie');
+  console.log('🍪 Full cookie header:', cookieHeader);
+
+  // Try multiple possible cookie names
+  const possibleCookieNames = [
+    'hardy_auth.session_token',
+    'hardy_auth.session',
+    'hardy_auth_session',
+    'better-auth.session',
+    'session',
+    'auth-session'
+  ];
+
+  let sessionToken = null;
+
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';').map(c => c.trim());
+    console.log('🍪 All cookies:', cookies);
+
+    for (const cookieName of possibleCookieNames) {
+      const cookie = cookies.find(c => c.startsWith(`${cookieName}=`));
+      if (cookie) {
+        const rawToken = cookie.split('=')[1];
+        // Better Auth cookies might be signed (token.signature), extract just the token part
+        sessionToken = rawToken.split('.')[0];
+        console.log(`🎯 Found session token with name: ${cookieName}, raw: ${rawToken}, extracted: ${sessionToken}`);
+        break;
+      }
+    }
+  }
 
   if (!sessionToken) {
+    console.log('❌ No session token found in any expected cookie name');
     throw new Error('No session token provided');
   }
 
@@ -132,7 +187,8 @@ export async function getSessionWithTenantContext(): Promise<ValidatedSession | 
     }
 
     // Check if user is a system admin
-    const isSystemAdmin = session.user.email.endsWith('@mlpipes.com') ||
+    const isSystemAdmin = session.user.email.endsWith('@mlpipes.ai') ||
+                         session.user.email === 'admin@mlpipes.ai' ||
                          session.user.email === 'admin@hardy.auth';
 
     if (isSystemAdmin) {
@@ -187,7 +243,8 @@ export async function requireSessionWithTenant(request: Request): Promise<Valida
   const session = await requireSession(request);
 
   // Check if user is a system admin
-  const isSystemAdmin = session.user.email.endsWith('@mlpipes.com') ||
+  const isSystemAdmin = session.user.email.endsWith('@mlpipes.ai') ||
+                       session.user.email === 'admin@mlpipes.ai' ||
                        session.user.email === 'admin@hardy.auth';
 
   if (isSystemAdmin) {

@@ -17,6 +17,7 @@ import {
   Mail,
   X
 } from 'lucide-react';
+import { Breadcrumb, breadcrumbConfigs } from '@/components/Breadcrumb';
 
 interface Organization {
   id: string;
@@ -126,6 +127,9 @@ export default function OrganizationsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <Breadcrumb items={breadcrumbConfigs.organizations} className="mb-6" />
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
