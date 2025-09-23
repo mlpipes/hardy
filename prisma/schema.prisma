@@ -9,25 +9,35 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  name          String?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String?
+  email           String
+  emailVerified   Boolean   @default(false)
+  image           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Better Auth required fields
+  twoFactorEnabled Boolean  @default(false)
+  banned          Boolean   @default(false)
+  banReason       String?
+  banExpires      DateTime?
 
   // Healthcare-specific fields
-  licenseNumber String?
-  npiNumber     String?
-  specialties   String[]
+  role            String    @default("user")
+  licenseNumber   String?
+  npiNumber       String?
+  specialties     String[]
 
-  sessions      Session[]
-  accounts      Account[]
+  sessions        Session[]
+  accounts        Account[]
 
   // Organization relationships
-  memberships   OrganizationMember[]
-  invitations   OrganizationInvitation[]
+  memberships     OrganizationMember[]
+  invitations     OrganizationInvitation[]
+
+  @@unique([email])
+  @@map("user")
 }
 
 model Organization {
@@ -99,39 +109,52 @@ model OrganizationInvitation {
 
 model Session {
   id        String   @id @default(cuid())
-  userId    String
   expiresAt DateTime
-  token     String   @unique
+  token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  organizationId    String?
-  accountId         String
-  providerId        String
-  accessToken       String? @db.Text
-  refreshToken      String? @db.Text
-  expiresAt         DateTime?
-  password          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Organization relationship (custom extension)
+  organizationId        String?
+
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
+  @@map("account")
 }
 
 model Verification {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   identifier String
-  value      String   @unique
+  value      String
   expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
 }

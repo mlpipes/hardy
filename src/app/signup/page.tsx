@@ -111,7 +111,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Sign-up Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate autoComplete="off">
             <div className="grid grid-cols-2 gap-4">
               {/* First Name */}
               <div>
@@ -122,7 +122,10 @@ export default function SignUpPage() {
                   id="firstName"
                   name="firstName"
                   type="text"
-                  autoComplete="given-name"
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={formData.firstName}
                   onChange={handleInputChange}
                   className={`block w-full px-3 py-2 border ${
@@ -144,7 +147,10 @@ export default function SignUpPage() {
                   id="lastName"
                   name="lastName"
                   type="text"
-                  autoComplete="family-name"
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={formData.lastName}
                   onChange={handleInputChange}
                   className={`block w-full px-3 py-2 border ${
@@ -167,7 +173,10 @@ export default function SignUpPage() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
                 value={formData.email}
                 onChange={handleInputChange}
                 className={`block w-full px-3 py-2 border ${
@@ -189,7 +198,10 @@ export default function SignUpPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="new-password"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
                 value={formData.password}
                 onChange={handleInputChange}
                 className={`block w-full px-3 py-2 border ${
@@ -214,7 +226,10 @@ export default function SignUpPage() {
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                autoComplete="new-password"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 className={`block w-full px-3 py-2 border ${

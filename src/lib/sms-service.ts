@@ -14,12 +14,29 @@ export class SMSService {
   private client: Twilio.Twilio | null = null
 
   constructor() {
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    // Only initialize Twilio with valid credentials (not placeholder values)
+    if (this.hasValidTwilioCredentials()) {
       this.client = Twilio(
         process.env.TWILIO_ACCOUNT_SID,
         process.env.TWILIO_AUTH_TOKEN
       )
+    } else {
+      console.warn('⚠️ Twilio SMS service not configured - SMS features will be disabled')
     }
+  }
+
+  private hasValidTwilioCredentials(): boolean {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+
+    return !!(
+      accountSid &&
+      authToken &&
+      accountSid.startsWith('AC') && // Valid Twilio Account SID format
+      accountSid.length >= 34 &&     // Minimum length for valid Account SID
+      authToken !== 'placeholder-token' && // Not a placeholder
+      accountSid !== 'placeholder-sid'     // Not a placeholder
+    )
   }
 
   async sendSMS(options: SMSOptions): Promise<void> {
@@ -67,16 +84,22 @@ export class SMSService {
   }
 
   isConfigured(): boolean {
-    return !!(
-      process.env.TWILIO_ACCOUNT_SID &&
-      process.env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_PHONE_NUMBER
-    )
+    return this.hasValidTwilioCredentials() && !!process.env.TWILIO_PHONE_NUMBER
   }
 }
 
-// Export singleton instance
-export const smsService = new SMSService()
+// Lazy singleton instance
+let smsServiceInstance: SMSService | null = null
+
+function getSMSService(): SMSService {
+  if (!smsServiceInstance) {
+    smsServiceInstance = new SMSService()
+  }
+  return smsServiceInstance
+}
+
+// Export singleton instance getter
+export const smsService = getSMSService
 
 // Export for direct use
-export const sendSMS = (options: SMSOptions) => smsService.sendSMS(options)
+export const sendSMS = (options: SMSOptions) => getSMSService().sendSMS(options)

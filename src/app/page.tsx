@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authClient } from '@/lib/better-auth-client';
@@ -14,6 +14,29 @@ export default function Home() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Clear form data on component mount and unmount for security
+  useEffect(() => {
+    // Force clear any browser-stored values on mount
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+
+    if (emailInput) {
+      emailInput.value = '';
+      emailInput.removeAttribute('value');
+    }
+    if (passwordInput) {
+      passwordInput.value = '';
+      passwordInput.removeAttribute('value');
+    }
+
+    // Clear form state
+    setFormData({ email: '', password: '' });
+
+    return () => {
+      setFormData({ email: '', password: '' });
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -56,15 +79,21 @@ export default function Home() {
 
       if (result.data) {
         console.log('Login successful:', result.data);
+        // Clear form data for security
+        setFormData({ email: '', password: '' });
         // Redirect to dashboard
         router.push('/dashboard');
       } else if (result.error) {
+        // Clear password on failed login for security
+        setFormData(prev => ({ ...prev, password: '' }));
         setErrors({
           password: result.error.message || 'Invalid email or password'
         });
       }
     } catch (error: any) {
       console.error('Login error:', error);
+      // Clear password on error for security
+      setFormData(prev => ({ ...prev, password: '' }));
       setErrors({
         password: error.message || 'An error occurred during login'
       });
@@ -87,7 +116,7 @@ export default function Home() {
             <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded">SOC 2 Ready</span>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate autoComplete="off">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email Address
@@ -96,13 +125,25 @@ export default function Home() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
+                data-lpignore="true"
+                data-form-type="other"
                 value={formData.email}
                 onChange={handleInputChange}
+                onFocus={(e) => {
+                  // Force clear on focus
+                  if (e.target.value !== formData.email) {
+                    e.target.value = formData.email;
+                  }
+                }}
                 className={`block w-full px-3 py-2 border ${
                   errors.email ? 'border-red-300' : 'border-gray-300'
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                placeholder="doctor@hospital.com"
+                placeholder="Enter your email address"
+                required
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -117,31 +158,33 @@ export default function Home() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
+                data-lpignore="true"
+                data-form-type="other"
                 value={formData.password}
                 onChange={handleInputChange}
+                onFocus={(e) => {
+                  // Force clear on focus
+                  if (e.target.value !== formData.password) {
+                    e.target.value = formData.password;
+                  }
+                }}
                 className={`block w-full px-3 py-2 border ${
                   errors.password ? 'border-red-300' : 'border-gray-300'
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                 placeholder="Enter your password"
+                required
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember"
-                  name="remember"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
+            {/* Remove "Remember me" checkbox for healthcare security */}
+            <div className="flex items-center justify-center">
               <button type="button" className="text-sm text-blue-600 hover:text-blue-500">
                 Forgot password?
               </button>

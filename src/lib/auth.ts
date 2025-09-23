@@ -11,7 +11,7 @@ import { phoneNumber } from "better-auth/plugins/phone-number"
 import { organization } from "better-auth/plugins/organization"
 import { admin } from "better-auth/plugins/admin"
 import { PrismaClient } from "@prisma/client"
-import { sendSMS } from "./sms-service"
+// SMS service imported dynamically to avoid initialization errors
 import { sendEmail } from "./email-service"
 import crypto from "crypto"
 import * as bcryptjs from "bcryptjs"
@@ -25,6 +25,24 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+
+  // User schema configuration to match our Prisma schema
+  user: {
+    additionalFields: {
+      licenseNumber: {
+        type: "string",
+        required: false,
+      },
+      npiNumber: {
+        type: "string",
+        required: false,
+      },
+      specialties: {
+        type: "string[]",
+        required: false,
+      },
+    },
+  },
   
   // Base URL configuration
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3001",
@@ -35,21 +53,41 @@ export const auth = betterAuth({
   // Email & Password Authentication
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: true, // Always require verification for security
     minPasswordLength: 12, // Healthcare security requirement
     maxPasswordLength: 128,
-    password: {
-      hash: async (password: string) => {
-        return bcryptjs.hash(password, 12)
-      },
-      verify: async (password: string, hash: string) => {
-        console.log('🔐 Password verify called:', { hasPassword: !!password, hasHash: !!hash, hashValue: hash?.substring(0, 20) });
-        if (!hash) {
-          console.error('❌ No password hash found in database');
-          return false;
+  },
+
+  // Email Verification Configuration
+  emailVerification: {
+    sendOnSignUp: true, // Automatically send verification email on signup
+    callbackURL: "/verify", // Redirect to our custom verification page
+    async sendVerificationEmail({ user, url, token }) {
+      console.log("📧 Better Auth: Sending verification email to", user.email);
+      console.log("🔗 Verification URL:", url);
+
+      try {
+        // Import our email service dynamically to avoid circular imports
+        const { sendVerificationEmail } = await import("./email-service");
+
+        const result = await sendVerificationEmail({
+          userEmail: user.email,
+          userName: user.name || user.email.split('@')[0],
+          verificationUrl: url,
+          organizationName: "Hardy Auth"
+        });
+
+        if (result) {
+          console.log("✅ Verification email sent successfully to", user.email);
+        } else {
+          console.error("❌ Failed to send verification email to", user.email);
         }
-        return bcryptjs.compare(password, hash)
-      },
+
+        return result;
+      } catch (error) {
+        console.error("❌ Error sending verification email:", error);
+        return false;
+      }
     },
   },
 
@@ -77,8 +115,10 @@ export const auth = betterAuth({
     crossSubDomainCookies: {
       enabled: false, // Disabled for security
     },
-    generateId: () => {
-      return `auth_${crypto.randomBytes(16).toString('hex')}`
+    database: {
+      generateId: () => {
+        return `auth_${crypto.randomBytes(16).toString('hex')}`
+      },
     },
     useSecureCookies: process.env.NODE_ENV === "production",
     rateLimit: {
@@ -107,10 +147,13 @@ export const auth = betterAuth({
       },
       sms: {
         async sendSMS({ phoneNumber, otp }) {
-          await sendSMS({
-            to: phoneNumber,
-            message: `Your Hardy Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
-          })
+          console.log('📱 SMS would send to:', phoneNumber, 'OTP:', otp);
+          // SMS temporarily disabled to isolate cache issues
+          // const { sendSMS } = await import("./sms-service");
+          // await sendSMS({
+          //   to: phoneNumber,
+          //   message: `Your Hardy Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
+          // })
         },
       },
       email: {
@@ -156,10 +199,13 @@ export const auth = betterAuth({
     phoneNumber({
       required: false, // Optional but recommended for healthcare
       sendSMS: async ({ phoneNumber, otp }) => {
-        await sendSMS({
-          to: phoneNumber,
-          message: `Your Hardy Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
-        })
+        console.log('📱 Phone SMS would send to:', phoneNumber, 'OTP:', otp);
+        // SMS temporarily disabled to isolate cache issues
+        // const { sendSMS } = await import("./sms-service");
+        // await sendSMS({
+        //   to: phoneNumber,
+        //   message: `Your Hardy Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
+        // })
       },
     }),
 

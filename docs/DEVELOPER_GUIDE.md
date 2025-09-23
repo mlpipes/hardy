@@ -230,7 +230,62 @@ npm run db:rls
 npm run db:seed
 ```
 
-#### 5. Start Development Server
+#### 5. Create Admin Account
+
+**Development Setup (Quick Start):**
+```bash
+# Create admin user with environment variables (development only)
+ADMIN_EMAIL="admin@yourcompany.com" \
+ADMIN_PASSWORD="YourSecurePassword123!" \
+ADMIN_NAME="System Administrator" \
+npm run create-admin
+
+# Output in development:
+# ✅ Admin user created successfully
+# 🔧 DEVELOPMENT MODE: Email verification disabled for development
+# 📝 Next steps: Enable 2FA, set admin role, etc.
+```
+
+**Production Setup (Secure):**
+```bash
+# Method 1: AWS Secrets Manager
+aws secretsmanager put-secret-value \
+  --secret-id "prod/hardy-auth/admin-credentials" \
+  --secret-string '{"ADMIN_EMAIL":"admin@yourcompany.com","ADMIN_PASSWORD":"SecurePassword123!","ADMIN_NAME":"System Administrator"}'
+
+export AWS_SECRETS_MANAGER_SECRET_ID="prod/hardy-auth/admin-credentials"
+export AWS_SECRETS_MANAGER_REGION="us-east-1"
+npm run create-admin
+
+# Method 2: Temporary environment (immediate cleanup required)
+export ADMIN_EMAIL="admin@yourcompany.com"
+export ADMIN_PASSWORD="SecurePassword123!"
+export ADMIN_NAME="System Administrator"
+npm run create-admin
+unset ADMIN_EMAIL ADMIN_PASSWORD ADMIN_NAME  # Immediate cleanup
+
+# Output in production:
+# ✅ Admin user created successfully
+# 📧 VERIFICATION EMAIL: Verification email sent to admin
+# ⚠️  Admin must verify email before first login
+```
+
+**Email Verification Configuration:**
+```bash
+# auth.ts configuration (automatic based on NODE_ENV):
+# Development: requireEmailVerification: false
+# Production:  requireEmailVerification: true
+# Always:      sendEmailVerificationOnSignUp: true
+```
+
+**Security Features:**
+- ✅ Environment-aware verification (dev vs prod)
+- ✅ Password strength validation (12+ characters)
+- ✅ Secrets manager integration ready
+- ✅ Automatic verification email sending
+- ✅ HIPAA-compliant audit logging
+
+#### 6. Start Development Server
 
 ```bash
 npm run dev
@@ -616,6 +671,14 @@ DATABASE_URL="postgresql://auth_service:SECURE_PASSWORD@db.yourdomain.com:5432/h
 BETTER_AUTH_SECRET="$(openssl rand -base64 32)" # Generate secure 32+ char secret
 BETTER_AUTH_URL="https://auth.yourdomain.com"
 
+# ⚠️ NEVER set admin credentials in production environment variables
+# Instead, use a secrets manager and the create-admin script
+# See section below on "Admin Account Setup"
+
+# Email Verification (Better Auth Configuration)
+REQUIRE_EMAIL_VERIFICATION="auto"  # auto = production only, true = always, false = never
+SEND_EMAIL_VERIFICATION_ON_SIGNUP="true"  # Always send verification emails
+
 # Session Configuration
 SESSION_MAX_AGE="1800"    # 30 minutes (adjust based on security requirements)
 SESSION_UPDATE_AGE="300"  # 5 minutes
@@ -642,6 +705,129 @@ REDIS_URL="redis://username:password@redis.yourdomain.com:6379/0"
 # Monitoring
 SENTRY_DSN="https://xxxx@sentry.io/xxxx"
 LOG_LEVEL="info"
+```
+
+#### Admin Account Setup (Production)
+
+**⚠️ Security Warning**: Never use environment variables for admin credentials in production. Use a secrets manager instead.
+
+**Option 1: Secrets Manager Integration** (Recommended)
+
+```bash
+# 1. Store admin credentials in your secrets manager
+# AWS Secrets Manager example:
+aws secretsmanager put-secret-value \
+  --secret-id "prod/hardy-auth/admin-credentials" \
+  --secret-string '{"ADMIN_EMAIL":"admin@yourcompany.com","ADMIN_PASSWORD":"YourSecurePassword123!","ADMIN_NAME":"System Administrator"}'
+
+# 2. Configure application to read from secrets manager
+export AWS_SECRETS_MANAGER_SECRET_ID="prod/hardy-auth/admin-credentials"
+export AWS_SECRETS_MANAGER_REGION="us-east-1"
+
+# 3. Run admin creation script
+npm run create-admin  # Automatically reads from secrets manager
+```
+
+**Option 2: Temporary Environment Setup**
+
+```bash
+# 1. Temporarily set credentials for initial setup only
+export ADMIN_EMAIL="admin@yourcompany.com"
+export ADMIN_PASSWORD="YourSecurePassword123!"
+export ADMIN_NAME="System Administrator"
+
+# 2. Create admin user
+npm run create-admin
+
+# 3. IMPORTANT: Immediately unset variables
+unset ADMIN_EMAIL ADMIN_PASSWORD ADMIN_NAME
+
+# 4. Force password change on first login
+```
+
+**Option 3: Manual Setup via Admin Interface**
+
+```bash
+# 1. Deploy with ENABLE_ADMIN_REGISTRATION="true" (temporarily)
+# 2. Access /admin/setup endpoint once
+# 3. Create admin account via web interface
+# 4. Set ENABLE_ADMIN_REGISTRATION="false" and redeploy
+```
+
+**Security Best Practices:**
+
+- Use multi-cloud portable secrets manager (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault)
+- Enable automatic credential rotation
+- Force password change on first login
+- Enable 2FA for all admin accounts
+- Audit admin access regularly
+- Use principle of least privilege for admin roles
+
+#### Email Verification Configuration
+
+**Environment-Based Configuration:**
+```typescript
+// src/lib/auth.ts - Automatic configuration
+emailAndPassword: {
+  requireEmailVerification: process.env.NODE_ENV === 'production', // Auto-enable in production
+  sendEmailVerificationOnSignUp: true, // Always send verification emails
+  minPasswordLength: 12,
+  maxPasswordLength: 128,
+}
+```
+
+**Manual Override (Optional):**
+```bash
+# Force email verification in all environments
+export REQUIRE_EMAIL_VERIFICATION="true"
+
+# Disable email verification completely (not recommended)
+export REQUIRE_EMAIL_VERIFICATION="false"
+
+# Auto mode (default) - production only
+export REQUIRE_EMAIL_VERIFICATION="auto"
+```
+
+**Email Service Requirements:**
+```bash
+# Required for verification emails (choose one)
+
+# SMTP Configuration
+SMTP_HOST="smtp.your-provider.com"
+SMTP_PORT="465"
+SMTP_USER="noreply@yourcompany.com"
+SMTP_PASS="your-smtp-password"
+SMTP_FROM="Your Company Auth <noreply@yourcompany.com>"
+
+# AWS SES Configuration
+AWS_SES_REGION="us-east-1"
+AWS_SES_FROM_EMAIL="noreply@yourcompany.com"
+AWS_ACCESS_KEY_ID="your-aws-key"
+AWS_SECRET_ACCESS_KEY="your-aws-secret"
+```
+
+**Testing Email Verification:**
+```bash
+# Development: Check console for verification URL
+npm run create-admin
+# Look for: "🔗 Verification URL: http://localhost:3001/verify-email?token=..."
+
+# Production: Email sent automatically
+NODE_ENV=production npm run create-admin
+# Check admin email inbox for verification link
+```
+
+**User Registration Flow:**
+```typescript
+// Automatic email verification flow:
+1. User registers → Account created (emailVerified: false)
+2. Verification email sent automatically
+3. User clicks verification link
+4. Account verified (emailVerified: true)
+5. User can now sign in
+
+// Development: Skip verification, immediate signin
+// Production: Verification required before signin
 ```
 
 ### Docker Deployment

@@ -109,7 +109,41 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
    npm run db:seed
    ```
 
-5. **Start development server**
+5. **Create default admin account**
+
+   **Development (Quick Setup):**
+   ```bash
+   # Create admin user with environment variables (development only)
+   ADMIN_EMAIL="admin@yourcompany.com" \
+   ADMIN_PASSWORD="YourSecurePassword123!" \
+   ADMIN_NAME="System Administrator" \
+   npm run create-admin
+
+   # Development: Email verification disabled, can sign in immediately
+   ```
+
+   **Production (Secure Setup):**
+   ```bash
+   # ⚠️ NEVER use environment variables in production
+   # Use secrets manager integration:
+
+   # AWS Secrets Manager example:
+   export AWS_SECRETS_MANAGER_SECRET_ID="prod/hardy-auth/admin-credentials"
+   export AWS_SECRETS_MANAGER_REGION="us-east-1"
+   npm run create-admin  # Reads from secrets manager
+
+   # Production: Verification email sent automatically, admin must verify before login
+   ```
+
+   **Security Features:**
+   - ✅ Automatic email verification (production)
+   - ✅ Password strength validation (12+ characters)
+   - ✅ Secrets manager integration ready
+   - ✅ Multi-cloud portable (AWS, Azure, Vault, GCP)
+
+   **See .env.example for complete secrets manager setup guides**
+
+6. **Start development server**
    ```bash
    npm run dev
    ```
@@ -391,6 +425,9 @@ npm run db:seed          # Seed database
 npm run db:reset         # Reset database
 npm run db:rls           # Setup row-level security
 
+# Admin Management
+npm run create-admin     # Create admin user (see environment setup above)
+
 # Docker
 npm run docker:build     # Build Docker image
 npm run docker:run       # Run Docker container
@@ -439,7 +476,38 @@ docker run -p 3001:3000 hardy/auth-service
    - Firewall rules (restrict to necessary ports)
    - Rate limiting and DDoS protection
 
-3. **Monitoring**
+3. **Secrets Management (Production)**
+   ```bash
+   # ⚠️ NEVER use environment variables for production secrets
+   # Instead, integrate with a secrets manager:
+
+   # AWS Secrets Manager
+   AWS_SECRETS_MANAGER_SECRET_ID="prod/hardy-auth/credentials"
+   AWS_SECRETS_MANAGER_REGION="us-east-1"
+
+   # Azure Key Vault
+   AZURE_KEY_VAULT_NAME="hardy-auth-keyvault"
+   AZURE_TENANT_ID="your-tenant-id"
+
+   # HashiCorp Vault
+   VAULT_ENDPOINT="https://vault.yourcompany.com"
+   VAULT_SECRET_PATH="secret/hardy-auth"
+
+   # See .env.example for complete integration examples
+   ```
+
+4. **Admin Account Setup (Production)**
+   ```bash
+   # Option 1: Use secrets manager with automated script
+   npm run create-admin  # Reads from secrets manager
+
+   # Option 2: Manual creation via admin interface
+   # 1. Deploy service with temporary access
+   # 2. Create admin via /admin/setup endpoint
+   # 3. Disable setup endpoint after creation
+   ```
+
+5. **Monitoring**
    - Health check endpoints (`/api/health`)
    - Application and security metrics
    - Log aggregation and alerting
