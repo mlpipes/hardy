@@ -228,7 +228,9 @@ Hardy Auth Service is currently designed as a self-contained Next.js application
 - OpenAPI documentation
 
 **📋 Planned:**
-- Client SDKs (JavaScript/TypeScript, Python, .NET)
+- Native Mobile SDKs (iOS/Swift, Android/Kotlin)
+- Web/JavaScript SDK (TypeScript, React, Vue, Angular)
+- Backend SDKs (Python, .NET, Java, Go)
 - Webhook system for real-time notifications
 - Rate limiting and API analytics
 
@@ -335,9 +337,107 @@ curl -X POST https://auth.yourcompany.com/api/trpc/auth.signIn \
 
 **Phase 3: Developer Experience**
 1. OpenAPI documentation generation
-2. Client SDK development
+2. Client SDK development (see SDK Roadmap below)
 3. Webhook system implementation
 4. API analytics and monitoring
+
+### SDK Development Roadmap
+
+#### 📱 iOS SDK (Swift)
+**Package:** `HardyAuthSwift`
+
+```swift
+// Future Swift SDK usage
+import HardyAuth
+
+let auth = HardyAuthClient(
+    baseURL: "https://auth.yourcompany.com",
+    apiKey: "your-api-key"
+)
+
+// Async/await authentication
+try await auth.signIn(email: email, password: password)
+
+// Biometric authentication
+try await auth.authenticateWithFaceID()
+
+// Healthcare context
+let user = try await auth.getCurrentUser()
+print("NPI: \(user.npiNumber)")
+```
+
+**Features:**
+- SwiftUI and UIKit support
+- Keychain integration for secure storage
+- Face ID/Touch ID authentication
+- Combine framework support
+- WebAuthn/Passkey support
+
+#### 🤖 Android SDK (Kotlin)
+**Package:** `com.hardy.auth`
+
+```kotlin
+// Future Kotlin SDK usage
+import com.hardy.auth.HardyAuthClient
+
+val auth = HardyAuthClient(
+    baseURL = "https://auth.yourcompany.com",
+    apiKey = "your-api-key"
+)
+
+// Coroutines-based authentication
+auth.signIn(email, password)
+    .onSuccess { user ->
+        // Handle successful login
+    }
+
+// Biometric authentication
+auth.authenticateWithBiometric(context)
+
+// Healthcare features
+val user = auth.getCurrentUser()
+Log.d("Hardy", "NPI: ${user.npiNumber}")
+```
+
+**Features:**
+- Jetpack Compose support
+- Android Keystore integration
+- Biometric authentication API
+- Coroutines and Flow support
+- Material Design components
+
+#### 🌐 JavaScript/TypeScript SDK
+**Package:** `@hardy/auth-js`
+
+```javascript
+// Future JavaScript SDK usage
+import { HardyAuth } from '@hardy/auth-js';
+
+const auth = new HardyAuth({
+    baseURL: 'https://auth.yourcompany.com',
+    apiKey: 'your-api-key'
+});
+
+// Promise-based authentication
+await auth.signIn({
+    email: 'doctor@hospital.com',
+    password: 'secure-password'
+});
+
+// React hook integration
+import { useHardyAuth } from '@hardy/auth-react';
+
+function LoginComponent() {
+    const { signIn, user, isLoading } = useHardyAuth();
+    // Component logic
+}
+```
+
+**Framework Support:**
+- **React:** `@hardy/auth-react` with hooks and context
+- **Vue:** `@hardy/auth-vue` with composition API
+- **Angular:** `@hardy/auth-angular` with services
+- **Next.js:** `@hardy/auth-nextjs` with middleware
 
 For immediate integration needs, contact [support@mlpipes.ai](mailto:support@mlpipes.ai) for custom API access solutions.
 
