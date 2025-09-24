@@ -300,6 +300,174 @@ Hardy Auth - Healthcare Authentication System
 }
 
 /**
+ * Send password reset email
+ */
+export async function sendPasswordResetEmail({
+  userEmail,
+  userName,
+  resetUrl,
+  organizationName = "Hardy Auth",
+}: {
+  userEmail: string;
+  userName: string;
+  resetUrl: string;
+  organizationName?: string;
+}): Promise<boolean> {
+  const displayName = userName || userEmail.split('@')[0];
+  const orgText = organizationName ? ` for ${organizationName}` : '';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background-color: #f5f5f5;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 40px auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff;
+          padding: 32px 40px;
+          text-align: center;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 600;
+        }
+        .content {
+          padding: 40px;
+        }
+        .button {
+          display: inline-block;
+          padding: 14px 32px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff !important;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 600;
+          font-size: 16px;
+          margin: 20px 0;
+        }
+        .security-notice {
+          background-color: #fef3c7;
+          border-left: 4px solid #f59e0b;
+          padding: 16px;
+          margin: 20px 0;
+          border-radius: 4px;
+        }
+        .footer {
+          background-color: #f8fafc;
+          padding: 24px 40px;
+          text-align: center;
+          font-size: 14px;
+          color: #6b7280;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🔐 Password Reset Request</h1>
+        </div>
+
+        <div class="content">
+          <p>Hello ${displayName},</p>
+
+          <p>We received a request to reset your password${orgText}. Click the button below to create a new password:</p>
+
+          <div style="text-align: center;">
+            <a href="${resetUrl}" class="button">Reset Your Password</a>
+          </div>
+
+          <div class="security-notice">
+            <strong>🔒 Security Notice:</strong>
+            <ul style="margin: 8px 0;">
+              <li>This link will expire in 1 hour for your security</li>
+              <li>If you didn't request this password reset, please ignore this email</li>
+              <li>Your password won't be changed until you create a new one</li>
+              <li>For healthcare compliance, this activity has been logged</li>
+            </ul>
+          </div>
+
+          <p><strong>Having trouble with the button?</strong><br>
+          Copy and paste this link into your browser:</p>
+
+          <p style="word-break: break-all; background-color: #f8fafc; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 14px;">
+            ${resetUrl}
+          </p>
+
+          <p>For security reasons, ensure your new password:</p>
+          <ul>
+            <li>Is at least 12 characters long</li>
+            <li>Contains a mix of uppercase and lowercase letters</li>
+            <li>Includes numbers and special characters</li>
+            <li>Is unique and not used elsewhere</li>
+          </ul>
+
+          <p>If you have any questions or need assistance, please contact our support team.</p>
+        </div>
+
+        <div class="footer">
+          <p><strong>Hardy Auth</strong> - Healthcare Authentication System</p>
+          <p>This email was sent to ${userEmail} because a password reset was requested for your account.</p>
+          <p>© ${new Date().getFullYear()} Hardy Auth. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+Hardy Auth - Password Reset Request
+
+Hello ${displayName},
+
+We received a request to reset your password${orgText}.
+
+Reset Password Link: ${resetUrl}
+
+This link will expire in 1 hour for your security.
+
+SECURITY NOTICE:
+- If you didn't request this password reset, please ignore this email
+- Your password won't be changed until you create a new one
+- For healthcare compliance, this activity has been logged
+
+For security reasons, ensure your new password:
+- Is at least 12 characters long
+- Contains a mix of uppercase and lowercase letters
+- Includes numbers and special characters
+- Is unique and not used elsewhere
+
+If you have any questions or need assistance, please contact our support team.
+
+Hardy Auth - Healthcare Authentication System
+© ${new Date().getFullYear()} Hardy Auth. All rights reserved.
+  `;
+
+  return sendEmail({
+    to: userEmail,
+    subject: `Password Reset Request - Hardy Auth${orgText}`,
+    htmlContent,
+    textContent,
+  });
+}
+
+/**
  * Check if AWS SES is properly configured
  */
 export function isEmailServiceConfigured(): boolean {

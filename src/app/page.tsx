@@ -199,9 +199,9 @@ export default function Home() {
 
             {/* Remove "Remember me" checkbox for healthcare security */}
             <div className="flex items-center justify-center">
-              <button type="button" className="text-sm text-blue-600 hover:text-blue-500">
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             <button

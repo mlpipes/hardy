@@ -14,6 +14,8 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 
 ### 🔐 Multi-Factor Authentication
 - **Email/Password**: Secure password policies (12+ characters, complexity requirements)
+- **Password Reset**: Healthcare-grade password reset with reuse prevention and audit logging
+- **Two-Factor Authentication**: TOTP support with Google Authenticator and backup codes
 - **Magic Links**: Passwordless email authentication
 - **SMS/TOTP**: Two-factor authentication with app-based or SMS codes
 - **Passkey/WebAuthn**: Biometric authentication (Face ID, Touch ID, security keys)
@@ -655,8 +657,8 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 - ✅ OAuth2 and SMART on FHIR support
 
 ### Upcoming Features (v1.1)
+- 🔄 Magic Link authentication
 - 🔄 Advanced fraud detection
-- 🔄 Passwordless authentication flows
 - 🔄 Advanced audit analytics
 - 🔄 Enhanced mobile SDKs
 

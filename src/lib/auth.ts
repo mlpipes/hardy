@@ -21,6 +21,144 @@ const prisma = new PrismaClient({
   datasourceUrl: process.env.DATABASE_URL || "postgresql://auth_service:auth_password@localhost:5434/hardy_auth?sslmode=prefer",
 })
 
+/**
+ * Save password to history for future reuse prevention
+ */
+async function savePasswordToHistory(userId: string, passwordHash: string): Promise<void> {
+  try {
+    // Add the new password to history
+    await prisma.passwordHistory.create({
+      data: {
+        userId,
+        passwordHash,
+      },
+    });
+
+    // Keep only the last 5 passwords (delete older ones)
+    const allPasswords = await prisma.passwordHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (allPasswords.length > 5) {
+      const passwordsToDelete = allPasswords.slice(5);
+      await prisma.passwordHistory.deleteMany({
+        where: {
+          id: {
+            in: passwordsToDelete.map(p => p.id)
+          }
+        }
+      });
+      console.log(`🗑️ Cleaned up ${passwordsToDelete.length} old password history entries`);
+    }
+
+    console.log(`💾 Saved password to history for user ${userId}`);
+  } catch (error) {
+    console.error("Error saving password to history:", error);
+    // Don't throw error as this shouldn't block password reset
+  }
+}
+
+/**
+ * Healthcare-grade password validation for password resets
+ * Prevents password reuse and enforces strict security policies
+ */
+async function validateHealthcarePassword(newPassword: string, token: string, userId?: string): Promise<{valid: boolean, message?: string}> {
+  try {
+    console.log(`🔍 Debug: Validating password with length ${newPassword.length}:`);
+    console.log(`🔍 Debug: First 3 chars: "${newPassword.substring(0, 3)}..."`);
+    console.log(`🔍 Debug: Has uppercase: ${/[A-Z]/.test(newPassword)}`);
+    console.log(`🔍 Debug: Has lowercase: ${/[a-z]/.test(newPassword)}`);
+    console.log(`🔍 Debug: Has number: ${/[0-9]/.test(newPassword)}`);
+    console.log(`🔍 Debug: Has special: ${/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)}`);
+
+    // 1. Basic password complexity validation
+    if (newPassword.length < 12) {
+      return { valid: false, message: "Password must be at least 12 characters long" };
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      return { valid: false, message: "Password must contain at least one uppercase letter" };
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      return { valid: false, message: "Password must contain at least one lowercase letter" };
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+      return { valid: false, message: "Password must contain at least one number" };
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      return { valid: false, message: "Password must contain at least one special character" };
+    }
+
+    // 2. Healthcare-specific forbidden patterns
+    const forbiddenPatterns = [
+      /password/i,
+      /qwerty/i,
+      /123456/i,
+      /admin/i,
+      /doctor/i,
+      /nurse/i,
+      /medical/i,
+      /health/i,
+      /patient/i,
+      /hospital/i,
+      /clinic/i,
+    ];
+
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(newPassword)) {
+        return { valid: false, message: "Password cannot contain common words or patterns" };
+      }
+    }
+
+    // 3. Check against password history (prevent reuse of last 5 passwords)
+    if (userId) {
+      try {
+        // Get last 5 password hashes for this user
+        const passwordHistory = await prisma.passwordHistory.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        });
+
+        console.log(`🔍 Checking password against ${passwordHistory.length} previous passwords`);
+
+        // Check if new password matches any previous passwords
+        for (const historicalPassword of passwordHistory) {
+          const isMatch = await bcryptjs.compare(newPassword, historicalPassword.passwordHash);
+          if (isMatch) {
+            return {
+              valid: false,
+              message: "Password cannot be the same as any of your last 5 passwords"
+            };
+          }
+        }
+
+        console.log("✅ Password does not match previous passwords");
+      } catch (error) {
+        console.error("Error checking password history:", error);
+        // Don't fail the validation due to history check errors
+        console.warn("⚠️ Password history check failed, but allowing password reset");
+      }
+    } else {
+      console.warn("⚠️ No userId provided - skipping password history check");
+    }
+
+    // 4. TODO: Rate limiting check
+    // Check if user has too many recent password reset attempts
+    console.warn("⚠️ TODO: Implement rate limiting for password reset attempts");
+
+    return { valid: true };
+
+  } catch (error) {
+    console.error("Error validating healthcare password:", error);
+    return { valid: false, message: "Password validation failed" };
+  }
+}
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -56,6 +194,84 @@ export const auth = betterAuth({
     requireEmailVerification: true, // Always require verification for security
     minPasswordLength: 12, // Healthcare security requirement
     maxPasswordLength: 128,
+    // Password Reset Configuration
+    sendResetPassword: async ({ user, url, token }) => {
+      console.log("🔐 Better Auth: Sending password reset email to", user.email);
+      console.log("🔗 Reset URL:", url);
+
+      try {
+        // Import our email service dynamically
+        const { sendPasswordResetEmail } = await import("./email-service");
+
+        const result = await sendPasswordResetEmail({
+          userEmail: user.email,
+          userName: user.name || user.email.split('@')[0],
+          resetUrl: url,
+          organizationName: "Hardy Auth"
+        });
+
+        if (result) {
+          console.log("✅ Password reset email sent successfully to", user.email);
+        } else {
+          console.error("❌ Failed to send password reset email to", user.email);
+        }
+
+        return result;
+      } catch (error) {
+        console.error("❌ Error sending password reset email:", error);
+        return false;
+      }
+    },
+    // Add callback for after password reset is completed
+    onPasswordReset: async ({ user }, request) => {
+      console.log(`🔐 Password reset completed for user ${user.email} (${user.id})`);
+
+      try {
+        // Extract the new password from request if available
+        // Note: This runs AFTER the password is changed, so we can't validate here
+        // But we can save to history and trigger other security measures
+        console.log("🔐 Triggering post-reset security measures");
+
+        // For now, just log the event - we'll implement history saving once we can intercept the password
+        console.log("⚠️ Password history saving not yet available in onPasswordReset callback");
+
+        // You could add other post-reset security measures here:
+        // - Force logout of other sessions
+        // - Send security notification emails
+        // - Update audit logs
+
+      } catch (error) {
+        console.error("Error in onPasswordReset callback:", error);
+      }
+    },
+    // Enhanced password validation for healthcare security
+    validatePassword: async (password: string, user: any) => {
+      console.log("🔐 Password update detected, validating with healthcare rules");
+      console.log("🔐 Validating password for user:", user?.email || user?.id);
+
+      // Use our comprehensive healthcare password validation with user ID
+      const validationResult = await validateHealthcarePassword(password, 'reset-token', user?.id);
+
+      if (!validationResult.valid) {
+        console.error(`❌ Password validation failed: ${validationResult.message}`);
+        return {
+          valid: false,
+          message: validationResult.message || "Password does not meet security requirements"
+        };
+      }
+
+      console.log("✅ Password validation passed - now saving to history");
+
+      // Save the password to history after validation passes
+      if (user?.id) {
+        const passwordHash = await bcryptjs.hash(password, 12);
+        await savePasswordToHistory(user.id, passwordHash);
+      } else {
+        console.warn("⚠️ No user ID available to save password to history");
+      }
+
+      return { valid: true };
+    },
   },
 
   // Email Verification Configuration
@@ -134,6 +350,7 @@ export const auth = betterAuth({
     "http://localhost:8081", // React Native Metro
     process.env.APP_URL || "https://auth.mlpipes.ai",
   ],
+
 
   // Enhanced plugins for healthcare authentication
   plugins: [
