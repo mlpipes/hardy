@@ -1,4 +1,4 @@
-# 🏥 Hardy Auth Backend Setup Guide
+# 🏥 Hardy Auth Service Setup Guide
 
 This guide will help you set up the new Hardy Auth backend with proper database naming and migrate from the old MLPipes Auth setup.
 
@@ -320,7 +320,23 @@ Hardy Auth uses a multi-tenant healthcare-focused schema:
 4. **Test Authentication**: Login with demo accounts
 5. **Customize Settings**: Configure organization and user settings
 6. **Enable 2FA**: Set up two-factor authentication for admin accounts
-7. **Production Setup**: Configure SSL, backups, and monitoring
+7. **API Integration**: For external app integration, see [API Integration Guide](../README.md#api-integration)
+8. **Production Setup**: Configure SSL, backups, and monitoring
+
+## 🔌 API Integration
+
+Hardy Auth Service is designed to serve as a centralized authentication service for multiple applications. Currently available integration methods:
+
+**Available Now:**
+- Better Auth REST endpoints for authentication flows
+- Admin API endpoints for user and organization management
+
+**Coming Soon:**
+- tRPC API endpoint for type-safe external access
+- API key management for secure third-party authentication
+- OAuth2 authorization server for standard integrations
+
+For immediate API integration needs, refer to the [README API Integration section](../README.md#api-integration) or contact support@mlpipes.ai.
 
 ## 🆘 Support
 

@@ -210,6 +210,137 @@ Hardy Auth Service requires a **dedicated PostgreSQL instance** for security and
 - **Connection Pool**: 20 max connections
 - **Backup**: Daily automated backups with 30-day retention
 
+## API Integration
+
+### Current API Status
+
+Hardy Auth Service is currently designed as a self-contained Next.js application. For external application integration, we are developing comprehensive API access layers:
+
+**✅ Available Now:**
+- Better Auth REST endpoints (`/api/auth/*`)
+- Custom authentication endpoints
+- Admin management endpoints
+
+**🔄 In Development:**
+- tRPC API endpoint for type-safe external access
+- API key management system
+- OAuth2 authorization server
+- OpenAPI documentation
+
+**📋 Planned:**
+- Client SDKs (JavaScript/TypeScript, Python, .NET)
+- Webhook system for real-time notifications
+- Rate limiting and API analytics
+
+### Current Integration Methods
+
+#### 1. Better Auth REST API
+
+Hardy Auth exposes standard authentication endpoints through Better Auth:
+
+```bash
+# User authentication
+POST /api/auth/sign-in/email
+Content-Type: application/json
+{
+  "email": "user@hospital.com",
+  "password": "secure-password"
+}
+
+# Password reset
+POST /api/auth/forgot-password
+Content-Type: application/json
+{
+  "email": "user@hospital.com",
+  "redirectTo": "https://your-app.com/reset-password"
+}
+
+# Two-factor verification
+POST /api/auth/two-factor/verify
+Content-Type: application/json
+{
+  "userId": "user_123",
+  "code": "123456"
+}
+```
+
+#### 2. Custom Healthcare APIs
+
+```bash
+# Get user profile with healthcare context
+GET /api/auth/me
+Authorization: Bearer <session-token>
+
+# Admin user management
+GET /api/admin/users?organizationId=org_123
+Authorization: Bearer <admin-session-token>
+
+# Organization management
+GET /api/admin/organizations/org_123
+Authorization: Bearer <admin-session-token>
+```
+
+### Upcoming API Features
+
+#### tRPC Type-Safe APIs
+
+Once implemented, external applications will access type-safe APIs:
+
+```typescript
+// Future tRPC integration example
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@hardy/auth-types';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: 'https://auth.yourcompany.com/api/trpc',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    }),
+  ],
+});
+
+// Type-safe authentication
+const user = await client.auth.signIn.mutate({
+  email: 'doctor@hospital.com',
+  password: 'secure-password'
+});
+```
+
+#### API Key Authentication
+
+```bash
+# Future API key authentication
+curl -X POST https://auth.yourcompany.com/api/trpc/auth.signIn \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
+  -d '{"email":"user@hospital.com","password":"secure"}'
+```
+
+### Integration Roadmap
+
+**Phase 1: API Foundation** (Next Priority)
+1. Expose tRPC endpoint (`/api/trpc/[trpc]/route.ts`)
+2. Implement API key management system
+3. Add rate limiting middleware
+4. CORS configuration for external access
+
+**Phase 2: OAuth2 Server**
+1. OAuth2 authorization flows
+2. Client registration and management
+3. JWT token support
+4. Scope-based permissions
+
+**Phase 3: Developer Experience**
+1. OpenAPI documentation generation
+2. Client SDK development
+3. Webhook system implementation
+4. API analytics and monitoring
+
+For immediate integration needs, contact [support@mlpipes.ai](mailto:support@mlpipes.ai) for custom API access solutions.
+
 ## API Usage Examples
 
 ### Authentication API (tRPC)
