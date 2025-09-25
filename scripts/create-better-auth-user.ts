@@ -39,15 +39,16 @@ async function main() {
   // Create account (for password authentication)
   await prisma.account.upsert({
     where: {
-      providerId_userId: {
-        providerId: 'email',
-        userId: user.id,
+      providerId_accountId: {
+        providerId: 'credential',
+        accountId: email,
       }
     },
     update: {},
     create: {
       id: 'admin-account-id',
-      providerId: 'email',
+      accountId: email,
+      providerId: 'credential',
       userId: user.id,
       password: hashedPassword,
       createdAt: new Date(),
