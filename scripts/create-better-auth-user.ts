@@ -17,18 +17,19 @@ const prisma = new PrismaClient({
 async function main() {
   console.log('Creating Better Auth user...');
 
+  const email = 'admin@mlpipes.ai';
   // Hash the password
   const hashedPassword = await hash('HardyAuth2024!', 12);
 
   // Create user in Better Auth format
   const user = await prisma.user.upsert({
-    where: { email: 'admin@mlpipes.ai' },
+    where: { email },
     update: {
       emailVerified: true,
     },
     create: {
       id: 'admin-user-id',
-      email: 'admin@mlpipes.ai',
+      email,
       emailVerified: true,
       name: 'System Administrator',
       createdAt: new Date(),

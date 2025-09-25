@@ -205,14 +205,4 @@ export function isValidRateLimit(requests: number, windowMs: number): boolean {
   return requests > 0 && windowMs >= 1000 && requests <= 10000
 }
 
-// Export validation schemas for external use
-export {
-  emailSchema,
-  passwordSchema,
-  phoneNumberSchema,
-  nameSchema,
-  organizationNameSchema,
-  npiSchema,
-  totpTokenSchema,
-  uuidSchema
-}
+// Validation schemas are already exported above individually

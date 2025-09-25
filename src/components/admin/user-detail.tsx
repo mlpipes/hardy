@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Calendar,
   Building2,
+  Trash2,
   FileText,
   Lock,
   Unlock,
