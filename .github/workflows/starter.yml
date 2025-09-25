@@ -37,7 +37,7 @@ jobs:
     - name: Run linting
       run: npm run lint
 
-    - name: Check if build works
+    - name: Build application
       run: npm run build
       env:
         # Minimal environment for build testing
