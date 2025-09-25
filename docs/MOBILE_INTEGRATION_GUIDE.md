@@ -88,6 +88,19 @@ class AuthenticationManager {
         return result.user
     }
 
+    // Magic link authentication
+    func requestMagicLink(email: String) async throws -> Bool {
+        return try await hardy.requestMagicLink(
+            email: email,
+            callbackURL: "yourapp://auth/callback"
+        )
+    }
+
+    // Handle magic link callback
+    func handleMagicLink(url: URL) async throws -> User {
+        return try await hardy.verifyMagicLink(url: url)
+    }
+
     // Biometric authentication
     func signInWithBiometrics() async throws -> User {
         return try await hardy.authenticateWithBiometrics(
@@ -192,6 +205,21 @@ class AuthenticationManager(context: Context) {
                 promptForCode()
             }
             .getOrThrow()
+    }
+
+    // Magic link authentication
+    suspend fun requestMagicLink(email: String): Boolean {
+        return hardy.requestMagicLink(
+            email = email,
+            callbackURL = "yourapp://auth/callback"
+        )
+    }
+
+    // Handle magic link deep link
+    suspend fun handleMagicLink(intent: Intent): User? {
+        return intent.data?.let { uri ->
+            hardy.verifyMagicLink(uri.toString())
+        }
     }
 
     // Biometric authentication
@@ -451,18 +479,24 @@ POST /oauth/token
 - Implement basic session management
 - Manual token handling
 
-### Phase 2: Wrapper Libraries (1-2 months)
-- Create lightweight wrapper libraries
-- Standardize error handling
-- Add basic type definitions
+### Phase 2: Complete Authentication Features (Months 1-3)
+- ✅ Modern authentication methods (magic links, SMS 2FA) - COMPLETED
+- 🔄 Passkey/WebAuthn authentication
+- 🔄 SMART on FHIR integration
+- 🔄 OAuth2 and OpenID Connect support
 
-### Phase 3: Native SDKs (2-4 months)
+### Phase 3: API Foundation (Months 4-5)
+- tRPC endpoint for external access
+- API key management system
+- CORS configuration and rate limiting
+
+### Phase 4: Native SDKs (Months 5-7)
 - Full-featured native SDKs
 - Biometric authentication
 - Automatic token refresh
 - Offline capabilities
 
-### Phase 4: Advanced Features (4-6 months)
+### Phase 5: Advanced Features (Months 7-9)
 - WebAuthn/Passkey support
 - Push notifications for 2FA
 - Offline authentication
@@ -481,11 +515,11 @@ POST /oauth/token
 - Discord Community: [Join our Discord](https://discord.gg/hardy-auth)
 
 ### SDK Release Schedule
-- **JavaScript SDK**: Q1 2025
-- **iOS SDK**: Q1 2025
-- **Android SDK**: Q1 2025
-- **Python SDK**: Q2 2025
-- **.NET SDK**: Q2 2025
+- **JavaScript SDK**: Q3 2025 (after API foundation)
+- **iOS SDK**: Q3 2025 (after API foundation)
+- **Android SDK**: Q3 2025 (after API foundation)
+- **Python SDK**: Q4 2025
+- **.NET SDK**: Q4 2025
 
 ---
 

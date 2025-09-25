@@ -137,7 +137,7 @@ export default function SettingsPage() {
                     Two-Factor Authentication (2FA)
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Add an extra layer of security to your account using TOTP authenticators
+                    Add an extra layer of security to your account using TOTP authenticators or SMS text messages
                   </p>
                 </div>
 

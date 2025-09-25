@@ -880,24 +880,41 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 
 ## Roadmap
 
-### Current Release (v1.0)
-- ✅ Core authentication features
-- ✅ Multi-factor authentication
-- ✅ HIPAA compliance features
-- ✅ Admin dashboard
-- ✅ OAuth2 and SMART on FHIR support
+### Current Release (v1.0) - Foundation
+- ✅ Core authentication features (email/password, email verification)
+- ✅ Two-factor authentication (TOTP) with backup codes
+- ✅ Password reset with healthcare-grade security
+- ✅ Multi-tenant architecture with row-level security
+- ✅ Basic admin dashboard and user management
 
-### Upcoming Features (v1.1)
-- 🔄 Magic Link authentication
-- 🔄 Advanced fraud detection
-- 🔄 Advanced audit analytics
-- 🔄 Enhanced mobile SDKs
+### Phase 1: Modern Authentication (v1.1) - In Progress
+- ✅ SMS Two-Factor Authentication
+- ✅ Magic Link Authentication
+- 🔄 Passkey/WebAuthn Support (biometric auth)
+- 🔄 QR Code Authentication
+- 🔄 Account Lockout Protection
+- 🔄 Session Timeout Management
 
-### Future Releases
-- 📋 FIDO2 security key support
-- 📋 Advanced threat detection
-- 📋 Compliance automation tools
-- 📋 Advanced analytics dashboard
+### Phase 2: SMART on FHIR Integration (v1.2)
+- 📋 SMART App Launch (standalone and EHR-integrated)
+- 📋 FHIR Scopes Implementation
+- 📋 Context Sharing (patient and encounter)
+- 📋 EHR Integration (Epic, Cerner compatibility)
+- 📋 SMART Authorization flows
+
+### Phase 3: OAuth2 & OpenID Connect (v1.3)
+- 📋 OAuth2 Authorization Server
+- 📋 OpenID Connect Provider
+- 📋 Client Management UI
+- 📋 Scope Management
+- 📋 Token Management lifecycle
+
+### Phase 4: API Foundation & SDKs (v2.0)
+- 📋 tRPC API Endpoint for external access
+- 📋 API Key Management
+- 📋 JavaScript/TypeScript SDK
+- 📋 iOS SDK (Swift)
+- 📋 Android SDK (Kotlin)
 
 ## Developer Resources
 

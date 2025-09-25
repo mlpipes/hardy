@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, AlertTriangle, Smartphone, MessageSquare } from 'lucide-react';
 import { authClient } from '@/lib/better-auth-client';
 
 export default function Verify2FAPage() {
@@ -16,6 +16,9 @@ export default function Verify2FAPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [method, setMethod] = useState<'totp' | 'sms'>('totp'); // Default to TOTP
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [smsSuccess, setSmsSuccess] = useState('');
 
   // Check if we have a pending 2FA verification
   useEffect(() => {
@@ -29,6 +32,28 @@ export default function Verify2FAPage() {
     checkSession();
   }, [router]);
 
+  const sendSMSCode = async () => {
+    setIsSendingSMS(true);
+    setError('');
+    setSmsSuccess('');
+
+    try {
+      // Use Better Auth's SMS 2FA sending capability
+      const result = await authClient.twoFactor.sendSms();
+
+      if (result.data) {
+        setSmsSuccess('SMS code sent successfully! Check your phone.');
+      } else if (result.error) {
+        setError(result.error.message || 'Failed to send SMS code');
+      }
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      setError('Failed to send SMS code. Please try again.');
+    } finally {
+      setIsSendingSMS(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -41,12 +66,12 @@ export default function Verify2FAPage() {
     setError('');
 
     try {
-      // Verify 2FA code with Better Auth
-      const result = await authClient.twoFactor.verifyTotp({
-        code: code,
-      });
+      // Verify 2FA code with Better Auth based on selected method
+      const result = method === 'sms'
+        ? await authClient.twoFactor.verifySms({ code: code })
+        : await authClient.twoFactor.verifyTotp({ code: code });
 
-      console.log('2FA verification result:', result);
+      console.log(`2FA ${method.toUpperCase()} verification result:`, result);
 
       if (result.data) {
         console.log('2FA verification successful');
@@ -83,11 +108,68 @@ export default function Verify2FAPage() {
             Two-Factor Authentication
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Enter the 6-digit code from your authenticator app
+            {method === 'totp'
+              ? 'Enter the 6-digit code from your authenticator app'
+              : 'Enter the 6-digit code sent to your phone'
+            }
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Method Selection */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setMethod('totp')}
+              className={`flex items-center justify-center px-4 py-3 border rounded-md text-sm font-medium transition-colors ${
+                method === 'totp'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Smartphone className="h-4 w-4 mr-2" />
+              Authenticator App
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod('sms')}
+              className={`flex items-center justify-center px-4 py-3 border rounded-md text-sm font-medium transition-colors ${
+                method === 'sms'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              SMS Text
+            </button>
+          </div>
+
+          {/* SMS Request Button */}
+          {method === 'sms' && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={sendSMSCode}
+                disabled={isSendingSMS}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {isSendingSMS ? 'Sending...' : 'Send SMS Code'}
+              </button>
+            </div>
+          )}
+
+          {/* Success Messages */}
+          {smsSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex">
+                <MessageSquare className="h-5 w-5 text-green-400 mt-0.5 mr-3" />
+                <p className="text-sm text-green-800">{smsSuccess}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Messages */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
               <div className="flex">
@@ -138,18 +220,48 @@ export default function Verify2FAPage() {
 
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Can't access your authenticator app?
+              {method === 'totp' ? "Can't access your authenticator app?" : "Didn't receive the SMS code?"}
             </p>
-            <button
-              type="button"
-              className="text-xs text-blue-600 hover:text-blue-500 font-medium"
-              onClick={() => {
-                // TODO: Implement backup code verification
-                alert('Backup code verification coming soon');
-              }}
-            >
-              Use a backup code instead
-            </button>
+            <div className="flex justify-center space-x-4 mt-2">
+              {method === 'totp' ? (
+                <>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                    onClick={() => setMethod('sms')}
+                  >
+                    Try SMS instead
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                    onClick={() => {
+                      alert('Backup code verification coming soon');
+                    }}
+                  >
+                    Use backup code
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                    onClick={sendSMSCode}
+                    disabled={isSendingSMS}
+                  >
+                    {isSendingSMS ? 'Sending...' : 'Resend SMS'}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                    onClick={() => setMethod('totp')}
+                  >
+                    Try authenticator app
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </form>
       </div>

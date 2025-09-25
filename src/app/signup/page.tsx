@@ -13,6 +13,7 @@ export default function SignUpPage() {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    phoneNumber: '', // Optional phone number for SMS 2FA
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,6 +60,11 @@ export default function SignUpPage() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    // Optional phone number validation
+    if (formData.phoneNumber && !/^\+[1-9]\d{1,14}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Please enter a valid phone number in international format (e.g., +1234567890)';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -76,6 +82,25 @@ export default function SignUpPage() {
 
       if (result.data) {
         console.log('Sign-up successful:', result.data);
+
+        // If phone number was provided, add it to the user's account
+        if (formData.phoneNumber) {
+          try {
+            const phoneResult = await authClient.phoneNumber.setPhoneNumber({
+              phoneNumber: formData.phoneNumber
+            });
+
+            if (phoneResult.data) {
+              console.log('Phone number added successfully');
+            } else {
+              console.warn('Failed to add phone number:', phoneResult.error);
+            }
+          } catch (phoneError) {
+            console.warn('Error adding phone number:', phoneError);
+            // Don't fail the signup for phone number issues
+          }
+        }
+
         // Redirect to dashboard directly (session is already created)
         router.push('/dashboard');
       } else if (result.error) {
@@ -240,6 +265,30 @@ export default function SignUpPage() {
               {errors.confirmPassword && (
                 <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
               )}
+            </div>
+
+            {/* Phone Number (Optional) */}
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-gray-400 text-xs">(Optional)</span>
+              </label>
+              <input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                className={`block w-full px-3 py-2 border ${
+                  errors.phoneNumber ? 'border-red-300' : 'border-gray-300'
+                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                placeholder="+1234567890"
+              />
+              {errors.phoneNumber && (
+                <p className="mt-1 text-xs text-red-600">{errors.phoneNumber}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Required for SMS two-factor authentication (recommended for healthcare security)
+              </p>
             </div>
 
             {/* Terms Agreement */}

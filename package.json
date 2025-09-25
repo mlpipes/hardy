@@ -36,6 +36,7 @@
     "@aws-sdk/client-ses": "^3.893.0",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
+    "@mendable/firecrawl-js": "^1.21.1",
     "@prisma/client": "^6.12.0",
     "@tanstack/react-query": "^5.17.0",
     "@trpc/client": "^11.0.0",

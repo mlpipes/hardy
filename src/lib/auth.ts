@@ -10,6 +10,7 @@ import { passkey } from "better-auth/plugins/passkey"
 import { phoneNumber } from "better-auth/plugins/phone-number"
 import { organization } from "better-auth/plugins/organization"
 import { admin } from "better-auth/plugins/admin"
+import { magicLink } from "better-auth/plugins/magic-link"
 import { PrismaClient } from "@prisma/client"
 // SMS service imported dynamically to avoid initialization errors
 import { sendEmail } from "./email-service"
@@ -364,13 +365,23 @@ export const auth = betterAuth({
       },
       sms: {
         async sendSMS({ phoneNumber, otp }) {
-          console.log('📱 SMS would send to:', phoneNumber, 'OTP:', otp);
-          // SMS temporarily disabled to isolate cache issues
-          // const { sendSMS } = await import("./sms-service");
-          // await sendSMS({
-          //   to: phoneNumber,
-          //   message: `Your Hardy Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
-          // })
+          console.log('📱 Sending SMS 2FA to:', phoneNumber, 'OTP:', otp);
+          try {
+            const { sendSMS } = await import("./sms-service");
+            await sendSMS({
+              to: phoneNumber,
+              message: `Your Hardy Auth verification code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`,
+            });
+            console.log('✅ SMS 2FA sent successfully to', phoneNumber);
+          } catch (error) {
+            console.error('❌ Failed to send SMS 2FA:', error);
+            // For development, we log but don't fail
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('🔧 SMS 2FA failed in development mode - check Twilio configuration');
+            } else {
+              throw error; // In production, we should fail if SMS doesn't work
+            }
+          }
         },
       },
       email: {
@@ -416,13 +427,23 @@ export const auth = betterAuth({
     phoneNumber({
       required: false, // Optional but recommended for healthcare
       sendSMS: async ({ phoneNumber, otp }) => {
-        console.log('📱 Phone SMS would send to:', phoneNumber, 'OTP:', otp);
-        // SMS temporarily disabled to isolate cache issues
-        // const { sendSMS } = await import("./sms-service");
-        // await sendSMS({
-        //   to: phoneNumber,
-        //   message: `Your Hardy Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
-        // })
+        console.log('📱 Sending phone verification SMS to:', phoneNumber, 'OTP:', otp);
+        try {
+          const { sendSMS } = await import("./sms-service");
+          await sendSMS({
+            to: phoneNumber,
+            message: `Your Hardy Auth phone verification code is: ${otp}. This code expires in 5 minutes.`,
+          });
+          console.log('✅ Phone verification SMS sent successfully to', phoneNumber);
+        } catch (error) {
+          console.error('❌ Failed to send phone verification SMS:', error);
+          // For development, we log but don't fail
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('🔧 Phone verification SMS failed in development mode - check Twilio configuration');
+          } else {
+            throw error; // In production, we should fail if SMS doesn't work
+          }
+        }
       },
     }),
 
@@ -534,6 +555,79 @@ export const auth = betterAuth({
             "medical_records:read",
           ],
         },
+      },
+    }),
+
+    // Magic Link Authentication
+    magicLink({
+      expiresIn: 60 * 10, // 10 minutes expiration
+      async sendMagicLink({ email, url, user }) {
+        console.log('🔗 Sending magic link to:', email);
+        try {
+          const result = await sendEmail({
+            to: email,
+            subject: "Hardy Auth - Your Secure Login Link",
+            htmlContent: `
+              <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Hardy Auth</h1>
+                  <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Secure Healthcare Authentication</p>
+                </div>
+                <div style="padding: 40px 30px; background: white;">
+                  <h2 style="color: #1f2937; margin: 0 0 20px 0;">Sign in to Your Account</h2>
+                  <p style="color: #6b7280; line-height: 1.6; margin: 0 0 20px 0;">
+                    Hello${user?.name ? ` ${user.name}` : ''},
+                  </p>
+                  <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0;">
+                    Click the secure link below to sign in to your Hardy Auth account.
+                    This link will expire in 10 minutes for your security.
+                  </p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${url}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                      Sign In Securely
+                    </a>
+                  </div>
+                  <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px;">
+                    <p style="color: #92400e; margin: 0; font-size: 14px;">
+                      <strong>Security Notice:</strong> If you didn't request this sign-in link,
+                      please ignore this email. Never share this link with anyone.
+                    </p>
+                  </div>
+                  <p style="color: #9ca3af; font-size: 12px; margin: 30px 0 0 0; text-align: center;">
+                    This email was sent to ${email}. If you have questions, contact support.
+                  </p>
+                </div>
+              </div>
+            `,
+            textContent: `
+Hardy Auth - Your Secure Login Link
+
+Hello${user?.name ? ` ${user.name}` : ''},
+
+Click the secure link below to sign in to your Hardy Auth account.
+This link will expire in 10 minutes for your security.
+
+Sign in here: ${url}
+
+SECURITY NOTICE: If you didn't request this sign-in link, please ignore this email. Never share this link with anyone.
+
+This email was sent to ${email}. If you have questions, contact support.
+
+Hardy Auth - Healthcare Authentication System
+            `,
+          });
+
+          if (result) {
+            console.log("✅ Magic link email sent successfully to", email);
+          } else {
+            console.error("❌ Failed to send magic link email to", email);
+          }
+
+          return result;
+        } catch (error) {
+          console.error("❌ Error sending magic link email:", error);
+          return false;
+        }
       },
     }),
 

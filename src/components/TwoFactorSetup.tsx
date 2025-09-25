@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QrCode, Smartphone, Shield, AlertTriangle, CheckCircle, Copy, Eye, EyeOff } from 'lucide-react';
+import { QrCode, Smartphone, Shield, AlertTriangle, CheckCircle, Copy, Eye, EyeOff, MessageSquare } from 'lucide-react';
 import { authClient } from '@/lib/better-auth-client';
 
 interface User {
@@ -37,6 +37,9 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
   const [success, setSuccess] = useState('');
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [password, setPassword] = useState('');
+  const [setupMethod, setSetupMethod] = useState<'totp' | 'sms'>('totp');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [smsStep, setSmsStep] = useState<'phone' | 'verify'>('phone');
 
   // Check current 2FA status
   useEffect(() => {
@@ -314,8 +317,235 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
         </div>
       )}
 
-      {/* Setup Process */}
-      {setupData && (
+      {/* Method Selection (after password confirmed, before setup) */}
+      {showPasswordPrompt === false && password && !setupData && !isEnabled && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Choose Your 2FA Method</h4>
+            <p className="text-sm text-gray-600">
+              Select how you'd like to receive your two-factor authentication codes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setSetupMethod('totp')}
+              className={`p-4 border rounded-lg text-left transition-colors ${
+                setupMethod === 'totp'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              <div className="flex items-center mb-2">
+                <Smartphone className="h-5 w-5 mr-3" />
+                <span className="font-medium">Authenticator App</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Use Google Authenticator, Authy, or other TOTP apps. More secure and works offline.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSetupMethod('sms')}
+              className={`p-4 border rounded-lg text-left transition-colors ${
+                setupMethod === 'sms'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              <div className="flex items-center mb-2">
+                <MessageSquare className="h-5 w-5 mr-3" />
+                <span className="font-medium">SMS Text Message</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Receive codes via text message. Requires a phone number.
+              </p>
+            </button>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setPassword('');
+                setShowPasswordPrompt(false);
+              }}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (setupMethod === 'totp') {
+                  confirmSetupWithPassword();
+                } else {
+                  setSmsStep('phone');
+                }
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SMS Phone Number Setup */}
+      {setupMethod === 'sms' && smsStep === 'phone' && !isEnabled && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Enter Your Phone Number</h4>
+            <p className="text-sm text-gray-600">
+              We'll send verification codes to this phone number.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number
+            </label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              placeholder="+1234567890"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Enter in international format (e.g., +1234567890)
+            </p>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSetupMethod('totp');
+                setSmsStep('phone');
+                setPhoneNumber('');
+              }}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!phoneNumber || !/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+                  setError('Please enter a valid phone number in international format');
+                  return;
+                }
+
+                setIsLoading(true);
+                setError('');
+
+                try {
+                  // Set phone number first
+                  const phoneResult = await authClient.phoneNumber.setPhoneNumber({
+                    phoneNumber: phoneNumber
+                  });
+
+                  if (phoneResult.data) {
+                    // Send SMS code
+                    const smsResult = await authClient.twoFactor.sendSms();
+                    if (smsResult.data) {
+                      setSmsStep('verify');
+                      setSuccess('SMS code sent! Check your phone.');
+                    } else {
+                      setError(smsResult.error?.message || 'Failed to send SMS code');
+                    }
+                  } else {
+                    setError(phoneResult.error?.message || 'Failed to set phone number');
+                  }
+                } catch (error: any) {
+                  setError(error.message || 'Failed to setup SMS 2FA');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading || !phoneNumber}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              {isLoading ? 'Sending...' : 'Send SMS Code'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SMS Verification */}
+      {setupMethod === 'sms' && smsStep === 'verify' && !isEnabled && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Verify SMS Code</h4>
+            <p className="text-sm text-gray-600">
+              Enter the 6-digit code we sent to {phoneNumber}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="123456"
+              className="block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-mono"
+              maxLength={6}
+            />
+            <button
+              onClick={async () => {
+                if (!verificationCode || verificationCode.length !== 6) {
+                  setError('Please enter a valid 6-digit code');
+                  return;
+                }
+
+                setIsLoading(true);
+                setError('');
+
+                try {
+                  const result = await authClient.twoFactor.verifySms({
+                    code: verificationCode
+                  });
+
+                  if (result.data) {
+                    setIsEnabled(true);
+                    setSuccess('SMS two-factor authentication has been enabled!');
+                    setSmsStep('phone');
+                    setVerificationCode('');
+                    setPhoneNumber('');
+                    setPassword('');
+                    await checkTwoFactorStatus();
+                  } else {
+                    setError(result.error?.message || 'Invalid verification code');
+                  }
+                } catch (error: any) {
+                  setError(error.message || 'Verification failed');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading || verificationCode.length !== 6}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              {isLoading ? 'Verifying...' : 'Verify & Enable'}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSmsStep('phone')}
+            className="text-sm text-blue-600 hover:text-blue-500"
+          >
+            ← Change phone number
+          </button>
+        </div>
+      )}
+
+      {/* Setup Process (TOTP) */}
+      {setupData && setupMethod === 'totp' && (
         <div className="border border-gray-200 rounded-lg p-6 space-y-6">
           <div>
             <h4 className="text-lg font-medium text-gray-900 mb-2">Set up Two-Factor Authentication</h4>
@@ -457,7 +687,7 @@ export function TwoFactorSetup({ user }: TwoFactorSetupProps) {
             <Shield className="h-5 w-5 text-blue-400 mt-0.5 mr-3" />
             <div className="text-sm text-blue-800">
               <p className="font-medium mb-1">Your account is protected with 2FA</p>
-              <p>You'll need to enter a code from your authenticator app when signing in.</p>
+              <p>You'll need to enter a verification code when signing in. You can use either your authenticator app or request an SMS code.</p>
             </div>
           </div>
         </div>

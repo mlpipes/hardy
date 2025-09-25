@@ -25,6 +25,7 @@
 - [x] **Password Security** - 12+ character requirements, complexity validation, secure hashing
 - [x] **Environment Configuration** - Comprehensive .env setup with security best practices
 - [x] **Two-Factor Authentication (2FA/TOTP)** - Google Authenticator, Authy support with QR codes and backup codes
+- [x] **SMS Two-Factor Authentication** - SMS-based 2FA with Twilio integration, method selection, and graceful fallback
 - [x] **Password Reset Functionality** - Healthcare-grade secure password reset with email verification, reuse prevention, rate limiting, and comprehensive audit logging
 - [x] **Dashboard Navigation** - User management, organization management, and settings pages with authentication
 
@@ -62,8 +63,8 @@
 ### **🔐 Enhanced Authentication & Security** (11 features)
 - [x] **Two-Factor Authentication (2FA/TOTP)** - Complete TOTP implementation with QR codes, backup codes, and Better Auth integration
 - [x] **Password Reset Functionality** - Healthcare-grade password reset with reuse prevention, rate limiting, and audit logging
-- [ ] **SMS Two-Factor Authentication** - SMS-based 2FA with Twilio integration
-- [ ] **Magic Link Authentication** - Passwordless email authentication flows
+- [x] **SMS Two-Factor Authentication** - SMS-based 2FA with Twilio integration, method selection, and graceful fallback
+- [x] **Magic Link Authentication** - Passwordless email authentication with secure 10-minute expiration and healthcare-compliant templates
 - [ ] **Passkey/WebAuthn Support** - Biometric authentication (Face ID, Touch ID, security keys)
 - [ ] **QR Code Authentication** - Mobile-to-web authentication flows
 - [ ] **Account Lockout Protection** - Lock accounts after failed login attempts
@@ -127,7 +128,7 @@
 - [ ] **Continuing Education Tracking** - Track CE credits and license renewal requirements
 - [ ] **Provider Directory Integration** - Integration with healthcare provider directories
 
-### **🔌 API & Integration** (13 features) - HIGH PRIORITY
+### **🔌 API & Integration** (13 features)
 - [ ] **tRPC API Endpoint** - Expose existing tRPC routers for type-safe external access (`/api/trpc/[trpc]/route.ts`)
 - [ ] **API Key Management** - Generate and manage API keys for third-party integrations
 - [ ] **CORS Configuration** - Cross-origin resource sharing for external applications
@@ -186,7 +187,29 @@
 
 ## 🎯 **Priority Roadmap**
 
-### **Phase 1: API Foundation & SDKs** (Immediate Priority - Months 1-2)
+### **Phase 1: Modern Authentication Features** (Immediate Priority - Months 1-2)
+1. ✅ **SMS Two-Factor Authentication** - SMS-based 2FA with Twilio integration *(COMPLETED)*
+2. ✅ **Magic Link Authentication** - Passwordless email authentication flows *(COMPLETED)*
+3. **Passkey/WebAuthn Support** - Biometric authentication (Face ID, Touch ID, security keys)
+4. **QR Code Authentication** - Mobile-to-web authentication flows
+5. **Account Lockout Protection** - Lock accounts after failed login attempts
+6. **Session Timeout Management** - Configurable session timeouts per organization (HIPAA 30-min requirement)
+
+### **Phase 2: SMART on FHIR Integration** (Months 2-3)
+1. **SMART App Launch** - Standalone and EHR-integrated SMART app launches
+2. **FHIR Scopes Implementation** - Patient, user, and system scopes support
+3. **Context Sharing** - Patient and encounter context in SMART launches
+4. **EHR Integration** - Epic, Cerner, and other major EHR system compatibility
+5. **SMART Authorization** - SMART-specific authorization flows and tokens
+
+### **Phase 3: OAuth2 & OpenID Connect** (Months 3-4)
+1. **OAuth2 Authorization Server** - Complete OAuth2 implementation with standard flows
+2. **OpenID Connect Provider** - OIDC implementation with ID tokens and userinfo endpoint
+3. **Client Management** - OAuth2 client registration and management UI
+4. **Scope Management** - Granular permission scopes for API access
+5. **Token Management** - Access token, refresh token, and ID token lifecycle
+
+### **Phase 4: API Foundation & SDKs** (Months 4-5)
 1. **tRPC API Endpoint** - Expose existing routers for external application access
 2. **API Key Management** - Secure API authentication for third-party applications
 3. **CORS Configuration** - Enable cross-origin requests for mobile and web apps
@@ -194,55 +217,35 @@
 5. **iOS SDK (Swift)** - Native iOS integration with biometric auth
 6. **Android SDK (Kotlin)** - Native Android integration with biometric auth
 
-### **Phase 2: Advanced Authentication** (Months 2-3)
-1. **Passkey/WebAuthn Support** - Biometric authentication
-2. **QR Code Authentication** - Mobile-to-web authentication
-3. **Device Management** - Track and manage user devices
-4. **OAuth2 Authorization Server** - Complete OAuth2 implementation
-5. **OpenID Connect Provider** - OIDC with ID tokens
-
-### **Phase 3: SMART on FHIR & Healthcare** (Months 3-4)
-1. **SMART App Launch** - EHR integration capabilities
-2. **FHIR Scopes Implementation** - Healthcare-specific scopes
-3. **Context Sharing** - Patient and encounter context
-4. **EHR Integration** - Epic, Cerner compatibility
-5. **Healthcare Role Templates** - Pre-defined healthcare roles
-
-### **Phase 4: Compliance & Security** (Months 4-5)
+### **Phase 5: Compliance & Security** (Months 5-6)
 1. **Comprehensive Audit Logging** - Full audit trail implementation
 2. **HIPAA Compliance Features** - Data encryption, consent management
 3. **Role-Based Access Control** - Complete RBAC system
 4. **Security Hardening** - CSRF, XSS, SQL injection protection
 5. **Compliance Reporting** - SOC 2, HIPAA reporting dashboards
 
-### **Phase 5: API & Integration** (Months 5-6)
-1. **API Key Management** - Third-party integration support
-2. **Webhook System** - Event-driven notifications
-3. **Rate Limiting** - API protection and fair usage
-4. **SDK Development** - Client libraries for popular languages
-5. **Integration Templates** - Pre-built healthcare integrations
+### **Phase 6: Enhanced Features & UX** (Months 6-7)
+1. **Role-Based Access Control** - Complete RBAC system
+2. **Admin Dashboard** - Comprehensive administration interface
+3. **User Management Features** - Advanced user administration
+4. **Modern UX Features** - PWA, accessibility, design system
+5. **Performance Optimization** - Caching, CDN, auto-scaling
 
-### **Phase 6: Admin & UX** (Months 6+)
-1. **Admin Dashboard** - Comprehensive administration interface
-2. **User Management Features** - Advanced user administration
-3. **Modern UX Features** - PWA, accessibility, design system
-4. **Performance Optimization** - Caching, CDN, auto-scaling
-5. **Advanced Analytics** - Usage analytics and reporting
 
 ---
 
 ## 📊 **Progress Statistics**
 
 - **Total Features**: 113
-- **Completed**: 18 (16%)
+- **Completed**: 19 (17%)
 - **In Progress**: 0 (0%)
-- **Remaining**: 95 (84%)
+- **Remaining**: 94 (83%)
 
 ### **By Category**
 | Category | Completed | Total | Progress |
 |----------|-----------|-------|----------|
 | **Core Authentication** | 16/16 | 16 | 100% ✅ |
-| **Enhanced Auth & Security** | 2/11 | 11 | 18% |
+| **Enhanced Auth & Security** | 3/11 | 11 | 27% |
 | **OAuth2 & OpenID Connect** | 0/6 | 6 | 0% |
 | **SMART on FHIR** | 0/8 | 8 | 0% |
 | **Role-Based Access Control** | 0/6 | 6 | 0% |
