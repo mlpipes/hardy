@@ -1,0 +1,134 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve Hardy Auth
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - maintainer-team
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible to help us resolve the issue quickly.
+
+        **Security Note**: If this is a security vulnerability, please do not create a public issue. Instead, email security@hardy-auth.com or use GitHub's private vulnerability reporting.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what went wrong!
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: Tell us what you expected!
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      description: Please provide step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component affected
+      description: Which component is affected by this bug?
+      options:
+        - Authentication (login/signup)
+        - Two-Factor Authentication (2FA)
+        - Magic Link Authentication
+        - SMS Authentication
+        - Password Reset
+        - User Management
+        - Organization Management
+        - Database/Migrations
+        - Email Service
+        - API Routes
+        - Frontend Components
+        - Documentation
+        - CI/CD
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical (Security vulnerability, data loss, system down)
+        - High (Major feature broken, significant impact)
+        - Medium (Feature partially broken, moderate impact)
+        - Low (Minor issue, cosmetic problem)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide information about your environment.
+      placeholder: |
+        - OS: [e.g., macOS, Windows, Linux]
+        - Node.js version: [e.g., 18.17.0]
+        - Hardy Auth version: [e.g., v1.0.0]
+        - Database: [e.g., PostgreSQL 15]
+        - Browser (if applicable): [e.g., Chrome 120]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted.
+      render: shell
+      placeholder: Paste your logs here...
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration (if relevant)
+      description: Please share relevant configuration (remove sensitive data!)
+      render: yaml
+      placeholder: |
+        # Example: .env variables (remove sensitive values)
+        DATABASE_URL=postgresql://...
+        BETTER_AUTH_URL=http://localhost:3001
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here, such as screenshots, error messages, etc.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have provided all requested information
+          required: true
+        - label: This is not a security vulnerability (I would report privately if it was)
+          required: true
+        - label: I am willing to help test a fix for this issue
+          required: false

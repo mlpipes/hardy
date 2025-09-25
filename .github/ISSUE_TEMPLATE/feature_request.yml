@@ -1,0 +1,140 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for Hardy Auth
+title: "[Feature]: "
+labels: ["enhancement", "feature-request", "triage"]
+assignees:
+  - product-team
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please provide as much detail as possible to help us understand your needs.
+
+        Before submitting, please check our [roadmap](https://github.com/hardy-auth/hardy/blob/main/docs/feature-checklist.md) to see if your feature is already planned.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this feature solve? What use case does it address?
+      placeholder: Describe the problem or use case this feature would solve...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe your proposed solution in detail.
+      placeholder: Describe how you think this feature should work...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What alternatives have you considered? How is your solution better?
+      placeholder: Describe any alternative solutions or features you've considered...
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature category
+      description: Which category does this feature belong to?
+      options:
+        - Authentication Methods
+        - Two-Factor Authentication
+        - User Management
+        - Organization Management
+        - Security & Compliance
+        - API & Integration
+        - Healthcare/FHIR
+        - User Interface
+        - Developer Experience
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (Blocking my use of Hardy Auth)
+        - High (Would significantly improve my experience)
+        - Medium (Would be a nice improvement)
+        - Low (Nice to have)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Simple (Small change, likely 1-2 days)
+        - Medium (Moderate change, likely 1-2 weeks)
+        - Complex (Large change, likely 1+ months)
+        - Not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: healthcare-context
+    attributes:
+      label: Healthcare context
+      description: If this feature relates to healthcare compliance or workflow, please provide context.
+      placeholder: |
+        - HIPAA compliance requirements
+        - Healthcare workflow integration
+        - EHR compatibility needs
+        - Clinical use cases
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: What would success look like? How would we know this feature is working correctly?
+      placeholder: |
+        - [ ] Feature does X
+        - [ ] Feature integrates with Y
+        - [ ] Feature meets compliance requirement Z
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or mockups
+      description: Provide examples, mockups, or references to similar implementations.
+      placeholder: |
+        You can attach images by dragging them here or provide links to examples.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute to this feature?
+      options:
+        - label: I am willing to implement this feature
+        - label: I am willing to help with testing
+        - label: I am willing to help with documentation
+        - label: I can provide domain expertise (healthcare/compliance)
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues and feature requests
+          required: true
+        - label: I have checked the project roadmap
+          required: true
+        - label: This feature aligns with Hardy Auth's healthcare focus
+          required: true
+        - label: I have provided sufficient detail for evaluation
+          required: true

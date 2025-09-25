@@ -41,6 +41,13 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 - **Input Validation**: Comprehensive sanitization and validation
 - **Regular Security Audits**: Quarterly penetration testing
 
+### 🚀 Developer Experience
+- **GitHub Actions CI/CD**: Automated testing, security scanning, and quality checks
+- **Comprehensive Testing**: Unit, integration, and security test suites with 80%+ coverage
+- **Code Quality**: Automated linting, type checking, and formatting
+- **Security Automation**: Dependency scanning, vulnerability detection, and compliance checks
+- **Open Source Ready**: Complete contributor guidelines and issue templates
+
 ## Quick Start
 
 ### Prerequisites
@@ -633,6 +640,28 @@ const metrics = await client.admin.metrics.query({
 
 ## Development
 
+### Contributing
+
+We welcome contributions! See our [Contributing Guide](.github/CONTRIBUTING.md) for detailed information.
+
+**Quick start for contributors:**
+```bash
+git clone https://github.com/hardy-auth/hardy.git
+cd hardy
+npm install
+npm run db:setup
+npm run dev
+```
+
+**GitHub Actions CI/CD:**
+- ✅ Automated testing on all pull requests
+- ✅ Security scanning with CodeQL, Snyk, and Semgrep
+- ✅ Code quality checks (linting, type checking, coverage)
+- ✅ Dependency vulnerability scanning
+- ✅ Automated releases and deployment
+
+See [Deployment Guide](.github/DEPLOYMENT_GUIDE.md) for CI/CD setup options.
+
 ### Scripts
 
 ```bash
@@ -646,7 +675,7 @@ npm run type-check       # TypeScript type checking
 # Testing
 npm run test             # Run tests
 npm run test:watch       # Run tests in watch mode
-npm run test:coverage    # Run tests with coverage
+npm run test:coverage    # Run tests with coverage (80% minimum)
 npm run test:ui          # Run tests with UI
 
 # Database

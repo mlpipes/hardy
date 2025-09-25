@@ -1,0 +1,72 @@
+name: CI (Basic)
+
+# Start with this simple workflow, then gradually add features
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: hardy_auth_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Generate Prisma client
+      run: npm run db:generate
+
+    - name: Run database migrations
+      run: npm run db:migrate
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/hardy_auth_test
+
+    - name: Run type checking
+      run: npm run type-check
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run tests
+      run: npm test
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/hardy_auth_test
+        BETTER_AUTH_SECRET: test-secret-key-32-characters-long-min
+        BETTER_AUTH_URL: http://localhost:3001
+        NODE_ENV: test
+
+    - name: Build application
+      run: npm run build
+      env:
+        BETTER_AUTH_SECRET: build-test-secret-32-chars-long
+        DATABASE_URL: postgresql://build:build@localhost/build_test

@@ -1,0 +1,111 @@
+name: 🔒 Security Report
+description: Report a security vulnerability (use private reporting when possible)
+title: "[Security]: "
+labels: ["security", "critical", "triage"]
+assignees:
+  - security-team
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ IMPORTANT SECURITY NOTICE
+
+        **Please do not create public issues for security vulnerabilities.**
+
+        For security vulnerabilities, please use one of these private reporting methods:
+
+        1. **Preferred**: Use GitHub's [Private Vulnerability Reporting](https://github.com/hardy-auth/hardy/security/advisories/new)
+        2. **Email**: Send details to security@hardy-auth.com
+        3. **Encrypted Email**: Use our PGP key for sensitive reports
+
+        Public security reports may be closed immediately and you will be asked to re-submit privately.
+
+        ---
+
+        **Only use this template for:**
+        - General security questions
+        - Security best practice discussions
+        - Non-sensitive security improvements
+
+  - type: dropdown
+    id: report-type
+    attributes:
+      label: Type of security report
+      description: What type of security report is this?
+      options:
+        - Security question
+        - Security best practice discussion
+        - Non-sensitive security improvement
+        - Compliance question
+        - Security documentation issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your security question, suggestion, or non-sensitive issue.
+      placeholder: Please provide details about your security-related inquiry...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component or area
+      description: Which area does this relate to?
+      options:
+        - Authentication flows
+        - Session management
+        - Password security
+        - Two-factor authentication
+        - API security
+        - Database security
+        - Email security
+        - Compliance (HIPAA/SOC2)
+        - Documentation
+        - CI/CD security
+        - Infrastructure
+        - General security practices
+    validations:
+      required: false
+
+  - type: textarea
+    id: healthcare-compliance
+    attributes:
+      label: Healthcare compliance context
+      description: Does this relate to healthcare compliance requirements?
+      placeholder: |
+        - HIPAA requirements
+        - SOC 2 compliance
+        - HITRUST framework
+        - Other compliance needs
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      description: Please confirm the following
+      options:
+        - label: This is NOT a security vulnerability (I would report vulnerabilities privately)
+          required: true
+        - label: I understand this issue will be public
+          required: true
+        - label: I have considered using private reporting channels for sensitive issues
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Security Reporting Channels
+
+        - **GitHub Private Vulnerability Reporting**: [Create private advisory](https://github.com/hardy-auth/hardy/security/advisories/new)
+        - **Email**: security@hardy-auth.com
+        - **Bug Bounty Program**: Coming soon
+
+        ## Security Resources
+
+        - [Security Documentation](https://github.com/hardy-auth/hardy/blob/main/docs/security.md)
+        - [Compliance Guide](https://github.com/hardy-auth/hardy/blob/main/docs/compliance.md)
+        - [Security Best Practices](https://github.com/hardy-auth/hardy/blob/main/docs/security-best-practices.md)
