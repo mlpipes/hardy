@@ -15,6 +15,26 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  onDemandEntries: {
+    // period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
+  output: 'standalone',
+  generateBuildId: async () => {
+    return 'hardy-auth-build'
+  },
+  experimental: {
+    outputFileTracingExcludes: {
+      '*': [
+        './node_modules/swc/lib',
+        './node_modules/esbuild',
+        './node_modules/webpack',
+        './node_modules/rollup'
+      ]
+    }
+  },
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3001',
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,

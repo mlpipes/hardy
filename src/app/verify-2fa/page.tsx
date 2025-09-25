@@ -5,6 +5,9 @@
 
 'use client';
 
+// Mark as dynamic route to prevent static generation
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, ArrowLeft, AlertTriangle, Smartphone, MessageSquare } from 'lucide-react';

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/session';
 
+// Mark as dynamic route
+export const dynamic = 'force-dynamic';
+
 /**
  * Get current user information
  * Protected endpoint that requires valid session

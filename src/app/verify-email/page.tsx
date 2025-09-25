@@ -1,5 +1,8 @@
 'use client';
 
+// Mark as dynamic route to prevent static generation
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react';
