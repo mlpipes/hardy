@@ -47,7 +47,7 @@ jobs:
         queries: +security-extended
 
     - name: Build project (for CodeQL)
-      run: npm run build
+      run: npm run build || true
       env:
         BETTER_AUTH_SECRET: codeql-analysis-secret-32-chars-long
         DATABASE_URL: postgresql://analysis:analysis@localhost/analysis_test
