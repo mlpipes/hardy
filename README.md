@@ -13,6 +13,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 ## Features
 
 ### 🔐 Multi-Factor Authentication
+
 - **Email/Password**: Secure password policies (12+ characters, complexity requirements)
 - **Password Reset**: Healthcare-grade password reset with reuse prevention and audit logging
 - **Two-Factor Authentication**: TOTP support with Google Authenticator and backup codes
@@ -22,12 +23,14 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 - **QR Code Auth**: Mobile-to-web authentication flows
 
 ### 🏥 Healthcare Compliance
+
 - **HIPAA Compliant**: 7-year audit retention, data encryption, access controls
 - **SOC 2 Type II Ready**: Security controls and continuous monitoring
 - **HITRUST CSF Ready**: Healthcare information security framework
 - **FHIR Integration**: SMART on FHIR support for EHR interoperability
 
 ### 🏢 Enterprise Features
+
 - **Multi-Tenant Architecture**: Complete tenant isolation with row-level security
 - **OAuth2 & OpenID Connect**: Standard-compliant authorization flows
 - **Admin Dashboard**: Professional healthcare-themed management interface
@@ -35,6 +38,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 - **Rate Limiting**: Configurable protection against abuse
 
 ### 🛡️ Security First
+
 - **Zero Trust Architecture**: Every request authenticated and authorized
 - **TLS 1.3 Encryption**: All communications encrypted
 - **Session Management**: Secure timeouts and device tracking
@@ -42,6 +46,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 - **Regular Security Audits**: Quarterly penetration testing
 
 ### 🚀 Developer Experience
+
 - **GitHub Actions CI/CD**: Automated testing, security scanning, and quality checks
 - **Comprehensive Testing**: Unit, integration, and security test suites with 80%+ coverage
 - **Code Quality**: Automated linting, type checking, and formatting
@@ -51,6 +56,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 18+ and npm 8+
 - PostgreSQL 14+ (dedicated instance recommended)
 - Docker and Docker Compose (optional)
@@ -59,17 +65,20 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/mlpipes/hardy.git
    cd hardy
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Environment setup**
+
    ```bash
    # Create environment file
    cat > .env.local << 'EOF'
@@ -98,6 +107,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
    ```
 
 4. **Database setup (Docker)**
+
    ```bash
    # Start PostgreSQL with Docker
    docker run --name hardy-auth-db \
@@ -121,6 +131,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
 5. **Create default admin account**
 
    **Development (Quick Setup):**
+
    ```bash
    # Create admin user with environment variables (development only)
    ADMIN_EMAIL="admin@yourcompany.com" \
@@ -132,6 +143,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
    ```
 
    **Production (Secure Setup):**
+
    ```bash
    # ⚠️ NEVER use environment variables in production
    # Use secrets manager integration:
@@ -145,6 +157,7 @@ This service leverages the powerful [Better Auth](https://github.com/better-auth
    ```
 
    **Security Features:**
+
    - ✅ Automatic email verification (production)
    - ✅ Password strength validation (12+ characters)
    - ✅ Secrets manager integration ready
@@ -177,6 +190,7 @@ docker-compose down
 ### Environment Variables
 
 #### Core Configuration
+
 ```env
 # Database (dedicated PostgreSQL instance recommended)
 DATABASE_URL="postgresql://auth_service:password@localhost:5433/hardy_auth"
@@ -193,6 +207,7 @@ SMTP_PASS="your-smtp-password"
 ```
 
 #### Optional Services
+
 ```env
 # SMS/Twilio (for SMS 2FA)
 TWILIO_ACCOUNT_SID="your-twilio-sid"
@@ -224,17 +239,20 @@ Hardy Auth Service requires a **dedicated PostgreSQL instance** for security and
 Hardy Auth Service is currently designed as a self-contained Next.js application. For external application integration, we are developing comprehensive API access layers:
 
 **✅ Available Now:**
+
 - Better Auth REST endpoints (`/api/auth/*`)
 - Custom authentication endpoints
 - Admin management endpoints
 
 **🔄 In Development:**
+
 - tRPC API endpoint for type-safe external access
 - API key management system
 - OAuth2 authorization server
 - OpenAPI documentation
 
 **📋 Planned:**
+
 - Native Mobile SDKs (iOS/Swift, Android/Kotlin)
 - Web/JavaScript SDK (TypeScript, React, Vue, Angular)
 - Backend SDKs (Python, .NET, Java, Go)
@@ -297,15 +315,15 @@ Once implemented, external applications will access type-safe APIs:
 
 ```typescript
 // Future tRPC integration example
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '@hardy/auth-types';
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "@hardy/auth-types";
 
 const client = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: 'https://auth.yourcompany.com/api/trpc',
+      url: "https://auth.yourcompany.com/api/trpc",
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     }),
   ],
@@ -313,8 +331,8 @@ const client = createTRPCProxyClient<AppRouter>({
 
 // Type-safe authentication
 const user = await client.auth.signIn.mutate({
-  email: 'doctor@hospital.com',
-  password: 'secure-password'
+  email: "doctor@hospital.com",
+  password: "secure-password",
 });
 ```
 
@@ -331,18 +349,21 @@ curl -X POST https://auth.yourcompany.com/api/trpc/auth.signIn \
 ### Integration Roadmap
 
 **Phase 1: API Foundation** (Next Priority)
+
 1. Expose tRPC endpoint (`/api/trpc/[trpc]/route.ts`)
 2. Implement API key management system
 3. Add rate limiting middleware
 4. CORS configuration for external access
 
 **Phase 2: OAuth2 Server**
+
 1. OAuth2 authorization flows
 2. Client registration and management
 3. JWT token support
 4. Scope-based permissions
 
 **Phase 3: Developer Experience**
+
 1. OpenAPI documentation generation
 2. Client SDK development (see SDK Roadmap below)
 3. Webhook system implementation
@@ -351,6 +372,7 @@ curl -X POST https://auth.yourcompany.com/api/trpc/auth.signIn \
 ### SDK Development Roadmap
 
 #### 📱 iOS SDK (Swift)
+
 **Package:** `HardyAuthSwift`
 
 ```swift
@@ -374,6 +396,7 @@ print("NPI: \(user.npiNumber)")
 ```
 
 **Features:**
+
 - SwiftUI and UIKit support
 - Keychain integration for secure storage
 - Face ID/Touch ID authentication
@@ -381,6 +404,7 @@ print("NPI: \(user.npiNumber)")
 - WebAuthn/Passkey support
 
 #### 🤖 Android SDK (Kotlin)
+
 **Package:** `com.hardy.auth`
 
 ```kotlin
@@ -407,6 +431,7 @@ Log.d("Hardy", "NPI: ${user.npiNumber}")
 ```
 
 **Features:**
+
 - Jetpack Compose support
 - Android Keystore integration
 - Biometric authentication API
@@ -414,33 +439,35 @@ Log.d("Hardy", "NPI: ${user.npiNumber}")
 - Material Design components
 
 #### 🌐 JavaScript/TypeScript SDK
+
 **Package:** `@hardy/auth-js`
 
 ```javascript
 // Future JavaScript SDK usage
-import { HardyAuth } from '@hardy/auth-js';
+import { HardyAuth } from "@hardy/auth-js";
 
 const auth = new HardyAuth({
-    baseURL: 'https://auth.yourcompany.com',
-    apiKey: 'your-api-key'
+  baseURL: "https://auth.yourcompany.com",
+  apiKey: "your-api-key",
 });
 
 // Promise-based authentication
 await auth.signIn({
-    email: 'doctor@hospital.com',
-    password: 'secure-password'
+  email: "doctor@hospital.com",
+  password: "secure-password",
 });
 
 // React hook integration
-import { useHardyAuth } from '@hardy/auth-react';
+import { useHardyAuth } from "@hardy/auth-react";
 
 function LoginComponent() {
-    const { signIn, user, isLoading } = useHardyAuth();
-    // Component logic
+  const { signIn, user, isLoading } = useHardyAuth();
+  // Component logic
 }
 ```
 
 **Framework Support:**
+
 - **React:** `@hardy/auth-react` with hooks and context
 - **Vue:** `@hardy/auth-vue` with composition API
 - **Angular:** `@hardy/auth-angular` with services
@@ -453,69 +480,73 @@ For immediate integration needs, contact [support@mlpipes.ai](mailto:support@mlp
 ### Authentication API (tRPC)
 
 #### User Registration
+
 ```typescript
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from './src/server/routers';
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "./src/server/routers";
 
 const client = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: 'http://localhost:3001/api/trpc',
+      url: "http://localhost:3001/api/trpc",
     }),
   ],
 });
 
 // Register a new user
 const newUser = await client.auth.signUp.mutate({
-  email: 'doctor@hospital.com',
-  password: 'SecurePassword123!',
-  firstName: 'John',
-  lastName: 'Doe',
-  organizationId: 'org_123',
-  licenseNumber: 'MD12345',
-  npiNumber: '1234567890',
-  specialties: ['Internal Medicine', 'Cardiology']
+  email: "doctor@hospital.com",
+  password: "SecurePassword123!",
+  firstName: "John",
+  lastName: "Doe",
+  organizationId: "org_123",
+  licenseNumber: "MD12345",
+  npiNumber: "1234567890",
+  specialties: ["Internal Medicine", "Cardiology"],
 });
 ```
 
 #### User Login with 2FA
+
 ```typescript
 // Step 1: Initial login
 const loginResult = await client.auth.signIn.mutate({
-  email: 'doctor@hospital.com',
-  password: 'SecurePassword123!'
+  email: "doctor@hospital.com",
+  password: "SecurePassword123!",
 });
 
 // Step 2: If 2FA is enabled, verify the code
 if (loginResult.requiresTwoFactor) {
   const session = await client.auth.twoFactor.verify.mutate({
     userId: loginResult.userId,
-    code: '123456', // Code from authenticator app or SMS
-    type: 'totp' // or 'sms'
+    code: "123456", // Code from authenticator app or SMS
+    type: "totp", // or 'sms'
   });
 }
 ```
 
 #### Magic Link Authentication
+
 ```typescript
 // Request magic link
 await client.auth.magicLink.request.mutate({
-  email: 'user@example.com',
-  organizationId: 'org_123'
+  email: "user@example.com",
+  organizationId: "org_123",
 });
 
 // Verify magic link (usually handled by clicking the link)
 const session = await client.auth.magicLink.verify.mutate({
-  token: 'magic_link_token_from_email'
+  token: "magic_link_token_from_email",
 });
 ```
 
 #### Passkey Registration
+
 ```typescript
 // Register a new passkey
 const passkey = await client.auth.passkey.register.mutate({
-  userId: 'user_123',
-  deviceName: 'MacBook Pro Touch ID'
+  userId: "user_123",
+  deviceName: "MacBook Pro Touch ID",
 });
 
 // Authenticate with passkey
@@ -524,7 +555,7 @@ const session = await client.auth.passkey.authenticate.mutate({
   // WebAuthn assertion data
   assertion: {
     // ... WebAuthn response
-  }
+  },
 });
 ```
 
@@ -533,32 +564,33 @@ const session = await client.auth.passkey.authenticate.mutate({
 ```typescript
 // Create organization
 const org = await client.organization.create.mutate({
-  name: 'General Hospital',
-  slug: 'general-hospital',
-  organizationType: 'hospital',
-  practiceNpi: '1234567890',
+  name: "General Hospital",
+  slug: "general-hospital",
+  organizationType: "hospital",
+  practiceNpi: "1234567890",
   mfaRequired: true,
   sessionTimeout: 1800, // 30 minutes
   complianceSettings: {
     hipaaEnabled: true,
     auditRetentionDays: 2555, // 7 years
-    encryptionRequired: true
-  }
+    encryptionRequired: true,
+  },
 });
 
 // Invite member to organization
 await client.organization.inviteMember.mutate({
   organizationId: org.id,
-  email: 'nurse@hospital.com',
-  role: 'clinician',
-  departmentId: 'dept_cardiology',
-  permissions: ['patient:read', 'appointment:manage']
+  email: "nurse@hospital.com",
+  role: "clinician",
+  departmentId: "dept_cardiology",
+  permissions: ["patient:read", "appointment:manage"],
 });
 ```
 
 ### REST API Examples
 
 #### OAuth2 Authorization Flow
+
 ```bash
 # 1. Redirect user to authorization endpoint
 curl -X GET "http://localhost:3001/api/oauth/authorize?\
@@ -588,25 +620,26 @@ curl -X POST "http://localhost:3001/api/oauth/token" \
 ```
 
 #### SMART on FHIR Launch
+
 ```javascript
 // SMART on FHIR Authorization
 const smartAuth = {
-  authorize: 'http://localhost:3001/api/fhir/authorize',
-  token: 'http://localhost:3001/api/fhir/token',
+  authorize: "http://localhost:3001/api/fhir/authorize",
+  token: "http://localhost:3001/api/fhir/token",
 
   // Request authorization
   async launchSMARTApp() {
     const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: 'smart_app_id',
-      scope: 'launch patient/*.read',
-      redirect_uri: 'https://app.example.com/smart/callback',
-      aud: 'https://fhir.hospital.com/fhir',
-      launch: 'launch_token_from_ehr'
+      response_type: "code",
+      client_id: "smart_app_id",
+      scope: "launch patient/*.read",
+      redirect_uri: "https://app.example.com/smart/callback",
+      aud: "https://fhir.hospital.com/fhir",
+      launch: "launch_token_from_ehr",
     });
 
     window.location.href = `${this.authorize}?${params}`;
-  }
+  },
 };
 ```
 
@@ -615,25 +648,25 @@ const smartAuth = {
 ```typescript
 // List users with filters
 const users = await client.admin.users.list.query({
-  organizationId: 'org_123',
-  role: 'clinician',
+  organizationId: "org_123",
+  role: "clinician",
   limit: 50,
-  offset: 0
+  offset: 0,
 });
 
 // Get audit logs
 const auditLogs = await client.admin.auditLogs.query({
-  organizationId: 'org_123',
-  userId: 'user_456',
-  action: 'LOGIN_SUCCESS',
-  startDate: '2024-01-01',
-  endDate: '2024-01-31'
+  organizationId: "org_123",
+  userId: "user_456",
+  action: "LOGIN_SUCCESS",
+  startDate: "2024-01-01",
+  endDate: "2024-01-31",
 });
 
 // Get authentication metrics
 const metrics = await client.admin.metrics.query({
-  organizationId: 'org_123',
-  period: '7d' // last 7 days
+  organizationId: "org_123",
+  period: "7d", // last 7 days
 });
 // Response: { totalLogins: 1250, failedLogins: 23, newUsers: 45, ... }
 ```
@@ -645,6 +678,7 @@ const metrics = await client.admin.metrics.query({
 We welcome contributions! See our [Contributing Guide](.github/CONTRIBUTING.md) for detailed information.
 
 **Quick start for contributors:**
+
 ```bash
 git clone https://github.com/hardy-auth/hardy.git
 cd hardy
@@ -654,6 +688,7 @@ npm run dev
 ```
 
 **GitHub Actions CI/CD:**
+
 - ✅ Automated testing on all pull requests
 - ✅ Security scanning with CodeQL, Snyk, and Semgrep
 - ✅ Code quality checks (linting, type checking, coverage)
@@ -729,16 +764,19 @@ docker run -p 3001:3000 hardy/auth-service
 ### Production Deployment
 
 1. **Environment Setup**
+
    - Dedicated PostgreSQL instance with SSL
    - NGINX reverse proxy with TLS 1.3
    - Redis for session storage (recommended)
 
 2. **Security Configuration**
+
    - SSL certificates (Let's Encrypt or commercial)
    - Firewall rules (restrict to necessary ports)
    - Rate limiting and DDoS protection
 
 3. **Secrets Management (Production)**
+
    ```bash
    # ⚠️ NEVER use environment variables for production secrets
    # Instead, integrate with a secrets manager:
@@ -759,6 +797,7 @@ docker run -p 3001:3000 hardy/auth-service
    ```
 
 4. **Admin Account Setup (Production)**
+
    ```bash
    # Option 1: Use secrets manager with automated script
    npm run create-admin  # Reads from secrets manager
@@ -807,28 +846,30 @@ docker run -p 3001:3000 hardy/auth-service
 ### Client Integration
 
 #### JavaScript/TypeScript
+
 ```typescript
-import { createHardyAuthClient } from '@hardy/auth-client';
+import { createHardyAuthClient } from "@hardy/auth-client";
 
 const auth = createHardyAuthClient({
-  baseUrl: 'https://auth.yourcompany.com',
-  clientId: 'your-client-id'
+  baseUrl: "https://auth.yourcompany.com",
+  clientId: "your-client-id",
 });
 
 // Authenticate user
 const session = await auth.signIn({
-  email: 'user@example.com',
-  password: 'secure-password'
+  email: "user@example.com",
+  password: "secure-password",
 });
 ```
 
 #### React Integration
+
 ```typescript
-import { HardyAuthProvider, useAuth } from '@hardy/auth-react';
+import { HardyAuthProvider, useAuth } from "@hardy/auth-react";
 
 function App() {
   return (
-    <HardyAuthProvider config={{ baseUrl: 'https://auth.yourcompany.com' }}>
+    <HardyAuthProvider config={{ baseUrl: "https://auth.yourcompany.com" }}>
       <YourApp />
     </HardyAuthProvider>
   );
@@ -910,6 +951,7 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 ## Roadmap
 
 ### Current Release (v1.0) - Foundation
+
 - ✅ Core authentication features (email/password, email verification)
 - ✅ Two-factor authentication (TOTP) with backup codes
 - ✅ Password reset with healthcare-grade security
@@ -917,6 +959,7 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 - ✅ Basic admin dashboard and user management
 
 ### Phase 1: Modern Authentication (v1.1) - In Progress
+
 - ✅ SMS Two-Factor Authentication
 - ✅ Magic Link Authentication
 - 🔄 Passkey/WebAuthn Support (biometric auth)
@@ -925,6 +968,7 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 - 🔄 Session Timeout Management
 
 ### Phase 2: SMART on FHIR Integration (v1.2)
+
 - 📋 SMART App Launch (standalone and EHR-integrated)
 - 📋 FHIR Scopes Implementation
 - 📋 Context Sharing (patient and encounter)
@@ -932,6 +976,7 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 - 📋 SMART Authorization flows
 
 ### Phase 3: OAuth2 & OpenID Connect (v1.3)
+
 - 📋 OAuth2 Authorization Server
 - 📋 OpenID Connect Provider
 - 📋 Client Management UI
@@ -939,6 +984,7 @@ Hardy Auth Service is licensed under the [MIT License](LICENSE).
 - 📋 Token Management lifecycle
 
 ### Phase 4: API Foundation & SDKs (v2.0)
+
 - 📋 tRPC API Endpoint for external access
 - 📋 API Key Management
 - 📋 JavaScript/TypeScript SDK
